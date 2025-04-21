@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Visor Satelital - Deforestación</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
+</head>
+<body>
+  <div id="controls">
+    <fieldset>
+      <legend>🗓️ Fechas de comparación</legend>
+      <label for="start-date">Desde:</label>
+      <input type="date" id="start-date" /><br>
+      <label for="end-date">Hasta:</label>
+      <input type="date" id="end-date" /><br>
+      <button id="load-images">🛰️ Cargar imágenes</button>
+      <button id="clear-swipe">🧹 Limpiar comparación</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>🎯 Parcela y captura</legend>
+      <button id="capture">📸 Capturar imagen</button>
+      <label for="opacity">Opacidad:</label>
+      <input type="range" id="opacity" min="0" max="1" step="0.1" value="0.7" />
+    </fieldset>
+
+    <fieldset>
+      <legend>📂 Historial</legend>
+      <label for="load-history">Cargar historial (.json):</label>
+      <input type="file" id="load-history" accept=".json" />
+    </fieldset>
+  </div>
+
+  <div id="viewDiv"></div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
+
