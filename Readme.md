@@ -42,7 +42,7 @@ http-server -c-1
 http://localhost:8080
 ```
 
-## 🧠 Consideraciones
+## Consideraciones
 
 - El visor usa ArcGIS JS API 4.29, se requiere una [API Key de ArcGIS](https://developers.arcgis.com/) válida para cargar imágenes de Sentinel-2.
 - Para evitar errores por archivos en caché durante el desarrollo, se recomienda:
@@ -50,17 +50,17 @@ http://localhost:8080
   - O cambiar la versión del script:  
     `<script type="module" src="main.js?v=1.0.0"></script>`
 
-## 📁 Estructura del proyecto
+## Estructura del proyecto
 
 ```
-📦 visor-deforestacion/
+visor-deforestacion/
 ├── index.html           → Interfaz del visor
 ├── style.css            → Estilos del visor
 ├── main.js              → Lógica del visor y controles
 ├── README.md            → Este archivo
 ```
 
-## 📸 Capturas y Evidencias
+## Capturas y Evidencias
 
 Cada captura genera:
 - Imagen PNG (`screenshot-YYYY-MM-DDTHH-MM-SS.png`)
