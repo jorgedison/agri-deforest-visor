@@ -1,0 +1,59 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#map {
+  height: 100vh;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.leaflet-control-zoom {
+  visibility: visible !important;
+  opacity: 1;
+}
+
+.control-panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: white;
+  padding: 12px;
+  border-radius: 5px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  max-width: 260px;
+  overflow-y: auto;
+  max-height: 90%;
+}
+
+.control-panel input[type="date"],
+.control-panel input[type="number"],
+.control-panel button {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.control-panel fieldset {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.control-panel legend {
+  font-weight: bold;
+  padding: 0 6px;
+  color: #333;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
+}
