@@ -1,51 +1,95 @@
-html, body, #viewDiv {
-  padding: 0;
+/* style.css */
+
+body {
   margin: 0;
-  height: 100%;
-  width: 100%;
+  padding: 0;
   font-family: Arial, sans-serif;
+}
+
+#map {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 300px; /* Deja espacio para el panel de control */
+  z-index: 1;
 }
 
 #controls {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 99;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 10px;
-  border-radius: 8px;
-  max-width: 350px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 300px;
+  background-color: #f8f9fa;
+  padding: 15px;
+  overflow-y: auto;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  z-index: 999;
 }
 
-fieldset {
-  border: 1px solid #ccc;
-  margin-bottom: 10px;
-  padding: 10px;
-  border-radius: 5px;
+#controls h2 {
+  margin-top: 0;
+  font-size: 18px;
 }
 
-legend {
+#controls label {
+  display: block;
+  margin-top: 10px;
   font-weight: bold;
-  padding: 0 5px;
 }
 
-button {
-  margin-top: 5px;
-  margin-right: 5px;
-  padding: 6px 10px;
+#controls input[type="date"],
+#controls input[type="number"] {
+  width: 100%;
+  padding: 5px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.buttons button {
+  padding: 8px;
+  font-size: 14px;
   cursor: pointer;
-  background-color: #0079c1;
-  color: white;
+  background-color: #0d6efd;
   border: none;
+  color: white;
   border-radius: 4px;
+  transition: background-color 0.2s ease-in-out;
 }
 
-button:hover {
-  background-color: #005d91;
+.buttons button:hover {
+  background-color: #0b5ed7;
 }
 
-input[type="range"] {
-  vertical-align: middle;
+#legend {
+  margin-top: 15px;
 }
 
+#legend .palette {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+#legend .palette span {
+  display: inline-block;
+  width: 24px;
+  height: 12px;
+  border: 1px solid #ccc;
+}
+
+#layer-label {
+  margin-top: 12px;
+  font-style: italic;
+  font-size: 13px;
+  color: #333;
+}

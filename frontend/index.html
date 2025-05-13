@@ -2,51 +2,69 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Visor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visor de Deforestación - Landsat NDVI</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
   <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="controls">
+    <h2>Monitoreo de Vegetación</h2>
 
-  <div class="control-panel">
-    <fieldset>
-      <legend><strong>NDVI</strong></legend>
-      <label for="ndvi-date">Fecha:</label>
-      <input type="date" id="ndvi-date" value="2025-01-01" title="Selecciona una fecha para ver el NDVI" />
-      <button id="btn-ver-ndvi" title="Ver NDVI de la fecha seleccionada">Ver NDVI GEE</button>
-    </fieldset>
+    <label for="start-date">Fecha inicial:</label>
+    <input type="date" id="start-date" value="2020-01-01" />
 
-    <fieldset>
-      <legend><strong>Comparar NDVI</strong></legend>
-      <label for="start-date">Fecha inicial:</label>
-      <input type="date" id="start-date" value="2020-01-01" />
-      <label for="end-date">Fecha final:</label>
-      <input type="date" id="end-date" value="2023-01-01" />
-      <label for="threshold">Threshold:</label>
-      <input type="number" id="threshold" min="0" max="1" step="0.01" value="0.2" />
-      <button id="btn-detectar">Detectar deforestación</button>
+    <label for="end-date">Fecha final:</label>
+    <input type="date" id="end-date" value="2023-01-01" />
+
+    <label for="ndvi-date">Fecha para estadísticas:</label>
+    <input type="date" id="ndvi-date" value="2023-01-01" />
+
+    <label for="threshold">Umbral NDVI:</label>
+    <input type="number" id="threshold" value="0.2" step="0.01" min="0" max="1" />
+
+    <div class="buttons">
+      <button id="btn-comparar-ndvi">Comparar NDVI</button>
+      <button id="btn-detectar">Diferencia NDVI</button>
       <button id="btn-zonas">Zonas deforestadas</button>
-    </fieldset>
-
-    <fieldset>
-      <legend><strong>Herramientas</strong></legend>
+      <button id="btn-stats">Estadísticas NDVI</button>
       <button id="btn-limpiar">Limpiar mapa</button>
       <button id="btn-dibujar">Dibujar área</button>
       <button id="btn-descargar">Descargar área (.json)</button>
-    </fieldset>
+      <button id="btn-capturar">Capturar visor (PNG)</button>
+      <input type="file" id="input-geojson" accept=".json" />
+      <button id="btn-stats-poly">Estadísticas desde polígono</button>
+    </div>
 
-    <div id="layer-label">Capa activa: -</div>
-    <div id="legend" class="legend" style="display: none;"></div>
-    <div id="errorMsg" class="error"></div>
+    <div id="legend" style="display:none">
+      <p><strong>Leyenda NDVI:</strong></p>
+      <div class="palette">
+        <span style="background:#67000d"></span>
+        <span style="background:#fcbba1"></span>
+        <span style="background:#ffffff"></span>
+        <span style="background:#ccece6"></span>
+        <span style="background:#006d2c"></span>
+      </div>
+    </div>
+
+    <p id="layer-label">Capa activa: -</p>
+
+    <div id="stats-panel" style="display:none">
+      <h3>Estadísticas NDVI</h3>
+      <p><strong>Año:</strong> <span id="stats-year">-</span></p>
+      <p><strong>Promedio:</strong> <span id="stats-mean">-</span></p>
+      <p><strong>Mínimo:</strong> <span id="stats-min">-</span></p>
+      <p><strong>Máximo:</strong> <span id="stats-max">-</span></p>
+      <p><strong>Desv. Est.:</strong> <span id="stats-std">-</span></p>
+      <p id="stats-msg" style="font-weight: bold; margin-top: 10px;"></p>
+    </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
-  <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+  <div id="map"></div>
   <script src="main.js"></script>
 </body>
 </html>

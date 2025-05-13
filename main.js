@@ -1,225 +1,229 @@
-import esriConfig from "https://js.arcgis.com/4.29/@arcgis/core/config.js";
-import Map from "https://js.arcgis.com/4.29/@arcgis/core/Map.js";
-import MapView from "https://js.arcgis.com/4.29/@arcgis/core/views/MapView.js";
-import Sketch from "https://js.arcgis.com/4.29/@arcgis/core/widgets/Sketch.js";
-import GraphicsLayer from "https://js.arcgis.com/4.29/@arcgis/core/layers/GraphicsLayer.js";
-import ImageryLayer from "https://js.arcgis.com/4.29/@arcgis/core/layers/ImageryLayer.js";
-import MosaicRule from "https://js.arcgis.com/4.29/@arcgis/core/layers/support/MosaicRule.js";
-import Graphic from "https://js.arcgis.com/4.29/@arcgis/core/Graphic.js";
-import Swipe from "https://js.arcgis.com/4.29/@arcgis/core/widgets/Swipe.js";
-import Polygon from "https://js.arcgis.com/4.29/@arcgis/core/geometry/Polygon.js";
+// main.js actualizado
 
-esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurLLBUp7pCsFtV1nmEHDHFltOkdXwbTgwUP67AXZzMFdb4RMmek6nV9JhxM6IvZ0si3zTgZL-hnpzypb7cQ1bkduuTZpzaq2TTOrdxvrdfHu5UAWNMZhQsdRoLHCRfgalC1Twsy-4LlZGHTIe6mTs3BktCY8KgZiqQSAWqIAbKCHXPKra6xFpbtpRxwkvTJ_numW-Smt4_2Ne3a44Id2GP6k.AT1_faXq8Bgj";
+const map = L.map("map").setView([-9.2, -75.15], 6);
 
-const graphicsLayer = new GraphicsLayer();
+L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  {
+    maxZoom: 22,
+    attribution: "Tiles © Esri"
+  }
+).addTo(map);
 
-const map = new Map({
-  basemap: "satellite",
-  layers: [graphicsLayer]
+map.zoomControl.setPosition('topright');
+
+const drawnItems = new L.FeatureGroup().addTo(map);
+const deforestationLayer = L.geoJSON(null, {
+  style: { color: "red", weight: 2, fillOpacity: 0.5, opacity: 0.8 },
+}).addTo(map);
+
+const screenshoter = L.simpleMapScreenshoter({
+  hidden: false,
+  preventDownload: false,
+  position: 'topright',
+  screenName: () => `captura_${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}`
 });
+map.addControl(screenshoter);
 
-const view = new MapView({
-  container: "viewDiv",
-  map: map,
-  center: [-73.5, -3.5],
-  zoom: 6
-});
+function formatDate(inputDate) {
+  const parts = inputDate.split("-");
+  return parts[0] + parts[1].padStart(2, "0") + parts[2].padStart(2, "0");
+}
 
-const sketch = new Sketch({
-  layer: graphicsLayer,
-  view: view,
-  availableCreateTools: ["polygon"],
-  creationMode: "single"
-});
-view.ui.add(sketch, "top-right");
+function limpiarMapa() {
+  map.eachLayer(layer => {
+    if (layer instanceof L.TileLayer && !layer._url.includes("World_Imagery")) {
+      map.removeLayer(layer);
+    }
+  });
+  deforestationLayer.clearLayers();
+  drawnItems.clearLayers();
+  document.getElementById("layer-label").textContent = "Capa activa: -";
+  document.getElementById("legend").style.display = "none";
+  document.getElementById("stats-panel").style.display = "none";
+}
 
-let layerBefore = null;
-let layerAfter = null;
-let currentArea = null;
+async function compararNDVI() {
+  const date1 = formatDate(document.getElementById("start-date").value);
+  const date2 = formatDate(document.getElementById("end-date").value);
+  const res1 = await fetch(`http://127.0.0.1:8080/gee-tile-url?date=${date1}`);
+  const res2 = await fetch(`http://127.0.0.1:8080/gee-tile-url?date=${date2}`);
+  const data1 = await res1.json();
+  const data2 = await res2.json();
 
-function renderHistorial(historial) {
-  const ul = document.getElementById("historialList");
-  if (!ul) return;
-  ul.innerHTML = "";
-  historial.forEach((item, index) => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <strong>Captura ${index + 1}</strong><br>
-      Fecha: ${new Date(item.fecha).toLocaleString()}<br>
-      Rango: ${item.dateRange.start || '—'} a ${item.dateRange.end || '—'}<br>
-      Imagen: <code>${item.imagen}</code><br>
-      <button onclick="window.open('${item.url_imagen}', '_blank')">Ver imagen</button>
-    `;
-    ul.appendChild(li);
+  limpiarMapa();
+  const capa1 = L.tileLayer(data1.tileUrl);
+  const capa2 = L.tileLayer(data2.tileUrl);
+  L.control.layers({ [`NDVI ${date1}`]: capa1, [`NDVI ${date2}`]: capa2 }, null, { collapsed: false }).addTo(map);
+  capa1.addTo(map);
+  document.getElementById("layer-label").textContent = `NDVI ${date1} vs ${date2}`;
+}
+
+async function detectarDiferencia() {
+  const date1 = formatDate(document.getElementById("start-date").value);
+  const date2 = formatDate(document.getElementById("end-date").value);
+  const res = await fetch(`http://127.0.0.1:8080/gee-ndvi-diff?date1=${date1}&date2=${date2}`);
+  const data = await res.json();
+  limpiarMapa();
+  L.tileLayer(data.tileUrl).addTo(map);
+  document.getElementById("layer-label").textContent = data.name;
+  document.getElementById("legend").style.display = "block";
+}
+
+async function detectarZonas() {
+  const date1 = formatDate(document.getElementById("start-date").value);
+  const date2 = formatDate(document.getElementById("end-date").value);
+  const threshold = document.getElementById("threshold").value;
+  const b = map.getBounds();
+  const url = `http://127.0.0.1:8080/gee-deforestation-zones?date1=${date1}&date2=${date2}&threshold=${threshold}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  deforestationLayer.clearLayers();
+  deforestationLayer.addData(data);
+  document.getElementById("layer-label").textContent = "Zonas deforestadas";
+}
+
+async function mostrarEstadisticas() {
+  const date = formatDate(document.getElementById("ndvi-date").value);
+  const b = map.getBounds();
+  const url = `http://127.0.0.1:8080/gee-ndvi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  document.getElementById("stats-year").textContent = data.year;
+  document.getElementById("stats-mean").textContent = data.mean.toFixed(3);
+  document.getElementById("stats-min").textContent = data.min.toFixed(3);
+  document.getElementById("stats-max").textContent = data.max.toFixed(3);
+  document.getElementById("stats-std").textContent = data.stdDev.toFixed(3);
+  document.getElementById("stats-panel").style.display = "block";
+}
+
+function activarDibujo() {
+  if (!map.drawControl) {
+    map.drawControl = new L.Control.Draw({
+      position: 'topright',
+      draw: {
+        polygon: true,
+        marker: false,
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        circlemarker: false,
+      },
+      edit: {
+        featureGroup: drawnItems,
+        remove: true
+      }
+    });
+    map.addControl(map.drawControl);
+  }
+
+  map.once(L.Draw.Event.CREATED, function (event) {
+    drawnItems.clearLayers();
+    drawnItems.addLayer(event.layer);
   });
 }
 
-document.getElementById("opacity").addEventListener("input", () => {
-  const opacity = parseFloat(document.getElementById("opacity").value);
-  if (layerBefore) layerBefore.opacity = opacity;
-  if (layerAfter) layerAfter.opacity = opacity;
-});
-
-document.getElementById("load-images").addEventListener("click", () => {
-  if (window._swipeWidget) {
-    view.ui.remove(window._swipeWidget);
-    window._swipeWidget.destroy();
-    window._swipeWidget = null;
-  }
-
-  const startDate = document.getElementById("start-date").value;
-  const endDate = document.getElementById("end-date").value;
-
-  if (!startDate || !endDate) {
-    alert("Selecciona ambas fechas.");
+function descargarGeoJSON() {
+  if (drawnItems.getLayers().length === 0) {
+    alert("Primero dibuja un polígono.");
     return;
   }
+  const geojson = drawnItems.toGeoJSON();
+  const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `area_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-  if (layerBefore) map.remove(layerBefore);
-  if (layerAfter) map.remove(layerAfter);
-
-  const mosaicBefore = new MosaicRule({
-    where: `acquisitiondate <= DATE '${startDate}'`
+function capturarMapa() {
+  map.once("rendercomplete", () => {
+    setTimeout(() => screenshoter.takeScreen(), 300);
   });
+  map.invalidateSize();
+}
 
-  const mosaicAfter = new MosaicRule({
-    where: `acquisitiondate >= DATE '${endDate}'`
-  });
-
-  layerBefore = new ImageryLayer({
-    url: "https://sentinel2.arcgis.com/arcgis/rest/services/Sentinel2/ImageServer",
-    mosaicRule: mosaicBefore,
-    opacity: parseFloat(document.getElementById("opacity").value)
-  });
-
-  layerAfter = new ImageryLayer({
-    url: "https://sentinel2.arcgis.com/arcgis/rest/services/Sentinel2/ImageServer",
-    mosaicRule: mosaicAfter,
-    opacity: parseFloat(document.getElementById("opacity").value)
-  });
-
-  map.addMany([layerBefore, layerAfter]);
-
-  const swipe = new Swipe({
-    view: view,
-    leadingLayers: [layerBefore],
-    trailingLayers: [layerAfter],
-    position: 50
-  });
-
-  view.ui.add(swipe);
-  window._swipeWidget = swipe;
-});
-
-document.getElementById("clear-swipe").addEventListener("click", () => {
-  if (window._swipeWidget) {
-    view.ui.remove(window._swipeWidget);
-    window._swipeWidget.destroy();
-    window._swipeWidget = null;
-  }
-});
-
-document.getElementById("capture").addEventListener("click", async () => {
-  const screenshot = await view.takeScreenshot();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const imageName = `screenshot-${timestamp}.png`;
-
-  const link = document.createElement("a");
-  link.href = screenshot.dataUrl;
-  link.download = imageName;
-  link.click();
-
-  const polygonGraphic = graphicsLayer.graphics.at(0);
-  const geometry = polygonGraphic ? {
-    ...polygonGraphic.geometry.toJSON(),
-    type: "polygon"
-  } : null;
-
-  if (!geometry) {
-    alert("Primero dibuja o carga una parcela.");
-    return;
-  }
-
-  const newEntry = {
-    fecha: new Date().toISOString(),
-    imagen: imageName,
-    dateRange: {
-      start: document.getElementById("start-date").value,
-      end: document.getElementById("end-date").value
-    },
-    url_imagen: imageName
-  };
-
-  let historialData;
-
-  if (currentArea) {
-    historialData = {
-      ...currentArea,
-      historial: [...currentArea.historial, newEntry]
-    };
-  } else {
-    const x = geometry.rings[0][0][0].toFixed(4);
-    const y = geometry.rings[0][0][1].toFixed(4);
-    const areaId = `area-${x}_${y}`;
-
-    historialData = {
-      id: areaId,
-      geometry: geometry,
-      historial: [newEntry]
-    };
-  }
-
-  currentArea = historialData;
-  renderHistorial(historialData.historial);
-
-  const blob = new Blob([JSON.stringify(historialData, null, 2)], { type: "application/json" });
-  const jsonLink = document.createElement("a");
-  jsonLink.href = URL.createObjectURL(blob);
-  jsonLink.download = `${historialData.id}.json`;
-  jsonLink.click();
-});
-
-document.getElementById("load-history").addEventListener("change", function (event) {
-  const file = event.target.files[0];
+document.getElementById("input-geojson")?.addEventListener("change", function (e) {
+  const file = e.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function (e) {
+  reader.onload = function (event) {
     try {
-      const data = JSON.parse(e.target.result);
-      if (!data.geometry || !data.historial) {
-        alert("El archivo no tiene el formato correcto.");
-        return;
-      }
-
-      const geometry = new Polygon({
-        ...data.geometry,
-        type: "polygon"
+      const geojson = JSON.parse(event.target.result);
+      const layer = L.geoJSON(geojson, {
+        style: { color: "#ff6600", weight: 2, fillOpacity: 0.2 },
       });
-
-      graphicsLayer.removeAll();
-      currentArea = data;
-
-      const polygonGraphic = new Graphic({
-        geometry: geometry,
-        symbol: {
-          type: "simple-fill",
-          color: [0, 255, 0, 0.2],
-          outline: {
-            color: [0, 255, 0],
-            width: 2
-          }
-        }
-      });
-
-      graphicsLayer.add(polygonGraphic);
-      view.goTo(polygonGraphic.geometry.extent.expand(1.5));
-      renderHistorial(data.historial);
+      drawnItems.clearLayers();
+      drawnItems.addLayer(layer);
+      map.fitBounds(layer.getBounds());
     } catch (err) {
-      alert("Error al leer el archivo.");
-      console.error(err);
+      alert("El archivo no es un GeoJSON válido.");
     }
   };
-
   reader.readAsText(file);
+});
+
+async function mostrarEstadisticasDesdePoligono() {
+  const date = formatDate(document.getElementById("ndvi-date").value);
+  const geojson = drawnItems.toGeoJSON();
+
+  if (!geojson.features.length) {
+    alert("Primero dibuja un polígono.");
+    return;
+  }
+
+  const geometry = geojson.features[0].geometry;
+
+  const res = await fetch('http://127.0.0.1:8080/gee-ndvi-stats-from-geojson', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date: date, geometry: geometry })
+  });
+
+  const data = await res.json();
+  if (data.error) {
+    alert("Error: " + data.error);
+    return;
+  }
+
+  // Cambiar estilo del polígono dibujado según el promedio NDVI
+  let color = '#00cc00'; // verde por defecto
+  let mensaje = 'Vegetación saludable';
+  if (data.mean < 0.4) {
+    color = '#ff0000'; // rojo si bajo NDVI
+    mensaje = '⚠ Posible deforestación';
+  } else if (data.mean < 0.6) {
+    color = '#ffcc00'; // amarillo si intermedio
+    mensaje = 'Vegetación intermedia';
+  }
+
+  drawnItems.eachLayer(layer => {
+    if (layer instanceof L.Polygon) {
+      layer.setStyle({ color: color, weight: 3, fillOpacity: 0.3 });
+    }
+  });
+
+  document.getElementById("stats-year").textContent = data.year;
+  document.getElementById("stats-mean").textContent = data.mean.toFixed(3);
+  document.getElementById("stats-min").textContent = data.min.toFixed(3);
+  document.getElementById("stats-max").textContent = data.max.toFixed(3);
+  document.getElementById("stats-std").textContent = data.stdDev.toFixed(3);
+  document.getElementById("stats-msg").textContent = mensaje;
+  document.getElementById("stats-panel").style.display = "block";
+}
+
+// Enlaces a botones
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("btn-comparar-ndvi").addEventListener("click", compararNDVI);
+  document.getElementById("btn-detectar").addEventListener("click", detectarDiferencia);
+  document.getElementById("btn-zonas").addEventListener("click", detectarZonas);
+  document.getElementById("btn-stats").addEventListener("click", mostrarEstadisticas);
+  document.getElementById("btn-stats-poly").addEventListener("click", mostrarEstadisticasDesdePoligono);
+  document.getElementById("btn-limpiar").addEventListener("click", limpiarMapa);
+  document.getElementById("btn-dibujar").addEventListener("click", activarDibujo);
+  document.getElementById("btn-descargar").addEventListener("click", descargarGeoJSON);
+  document.getElementById("btn-capturar").addEventListener("click", capturarMapa);
 });
