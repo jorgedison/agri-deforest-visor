@@ -14,6 +14,14 @@ def reflectance(image, band):
     return image.select(band).multiply(0.0000275).add(-0.2)
 
 # Construir un mosaico NDVI promedio para un año
+
+# Rango NDVI y su interpretación:
+# < 0.1       → suelo expuesto (rojo oscuro)
+# 0.1 - 0.2   → pasto / zonas degradadas (naranja)
+# 0.2 - 0.6   → cultivos / vegetación baja (amarillo-verde)
+# 0.6 - 0.8   → vegetación densa (verde)
+# > 0.8       → bosque denso / selva (verde oscuro)
+
 def buscar_ndvi_anual(fecha):
     anio = fecha[:4]
     start = f"{anio}-01-01"
@@ -56,12 +64,20 @@ def get_tile_url():
         return jsonify({'error': 'Formato de fecha inválido. Use YYYYMMDD.'}), 400
 
     try:
+        # NDVI y visualización
         ndvi = buscar_ndvi_anual(date)
+
+        # Parámetros opcionales desde el frontend
+        min_val = float(request.args.get('min', -0.2))
+        max_val = float(request.args.get('max', 0.8))
+        palette = request.args.getlist('palette') or ['#762a83', '#af8dc3', '#e7d4e8', '#d9f0d3', '#7fbf7b', '#1b7837']
+
         vis_params = {
-            'min': -0.2,
-            'max': 0.8,
-            'palette': ['#d73027', '#f46d43', '#fdae61', '#a6d96a', '#1a9850']
+            'min': min_val,
+            'max': max_val,
+            'palette': palette
         }
+
         visual = ndvi.visualize(**vis_params)
         map_id_dict = ee.data.getMapId({'image': visual})
 
@@ -74,6 +90,7 @@ def get_tile_url():
         return jsonify({'error': f'Error de Earth Engine: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': f'Error inesperado: {str(e)}'}), 500
+
 
 @app.route('/gee-ndvi-stats')
 def ndvi_stats():
@@ -94,23 +111,30 @@ def ndvi_stats():
         region = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
 
         stats = ndvi.reduceRegion(
-            reducer=ee.Reducer.mean().combine(ee.Reducer.minMax(), sharedInputs=True)
-                                 .combine(ee.Reducer.stdDev(), sharedInputs=True),
+            reducer=ee.Reducer.mean()
+                .combine(ee.Reducer.minMax(), sharedInputs=True)
+                .combine(ee.Reducer.stdDev(), sharedInputs=True)
+                .combine(ee.Reducer.count(), sharedInputs=True),
             geometry=region,
             scale=30,
             maxPixels=1e13
         ).getInfo()
 
+        if stats.get('NDVI_mean') is None:
+            return jsonify({'error': 'No se encontraron datos NDVI en la región seleccionada'}), 400
+
         return jsonify({
             'year': int(date[:4]),
-            'mean': stats.get('NDVI_mean'),
-            'min': stats.get('NDVI_min'),
-            'max': stats.get('NDVI_max'),
-            'stdDev': stats.get('NDVI_stdDev')
+            'mean': stats['NDVI_mean'],
+            'min': stats['NDVI_min'],
+            'max': stats['NDVI_max'],
+            'stdDev': stats['NDVI_stdDev'],
+            'count': stats['NDVI_count']
         })
 
     except Exception as e:
         return jsonify({'error': f'Error al calcular estadísticas NDVI: {str(e)}'}), 500
+
 
 @app.route('/gee-ndvi-diff')
 def diferencia_ndvi():
@@ -127,7 +151,7 @@ def diferencia_ndvi():
         vis_params = {
             'min': -0.1,
             'max': 0.1,
-            'palette': ['#67000d', '#fcbba1', '#ffffff', '#ccece6', '#006d2c']
+            'palette': ['#762a83', '#af8dc3', '#e7d4e8', '#7fbf7b', '#1b7837']
         }
 
         map_id_dict = ee.data.getMapId({'image': diferencia.visualize(**vis_params)})
@@ -180,6 +204,7 @@ def zonas_deforestadas():
     except Exception as e:
         return jsonify({'error': f'Error al generar zonas deforestadas: {str(e)}'}), 500
 
+
 @app.route('/gee-ndvi-stats-from-geojson', methods=['POST'])
 def ndvi_stats_from_geojson():
     data = request.get_json()
@@ -193,49 +218,65 @@ def ndvi_stats_from_geojson():
         region = ee.Geometry(geojson)
         ndvi = buscar_ndvi_anual(date)
         stats = ndvi.reduceRegion(
-            reducer=ee.Reducer.mean().combine(ee.Reducer.minMax(), sharedInputs=True)
-                                 .combine(ee.Reducer.stdDev(), sharedInputs=True),
+            reducer=ee.Reducer.mean()
+                .combine(ee.Reducer.minMax(), sharedInputs=True)
+                .combine(ee.Reducer.stdDev(), sharedInputs=True)
+                .combine(ee.Reducer.count(), sharedInputs=True),
             geometry=region,
             scale=30,
             maxPixels=1e13
         ).getInfo()
 
+        if stats.get('NDVI_mean') is None:
+            return jsonify({'error': 'No se encontraron datos NDVI en el polígono especificado'}), 400
+
         return jsonify({
             'year': int(date[:4]),
-            'mean': stats.get('NDVI_mean'),
-            'min': stats.get('NDVI_min'),
-            'max': stats.get('NDVI_max'),
-            'stdDev': stats.get('NDVI_stdDev')
+            'mean': stats['NDVI_mean'],
+            'min': stats['NDVI_min'],
+            'max': stats['NDVI_max'],
+            'stdDev': stats['NDVI_stdDev'],
+            'count': stats['NDVI_count']
         })
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/gee-ndvi-histogram')
+@app.route('/gee-ndvi-histogram', methods=['POST'])
 def ndvi_histograma():
-    date1 = request.args.get('date1')
-    date2 = request.args.get('date2')
-    if not date1 or not date2:
-        return jsonify({'error': 'Faltan fechas date1 o date2'}), 400
+    data = request.get_json()
+    date1 = data.get('date1')
+    date2 = data.get('date2')
+    geojson = data.get('geometry')
+
+    if not date1 or not date2 or not geojson:
+        return jsonify({'error': 'Faltan parámetros date1, date2 o geometry'}), 400
 
     try:
+        region = ee.Geometry(geojson)
         ndvi1 = buscar_ndvi_anual(date1)
         ndvi2 = buscar_ndvi_anual(date2)
         diferencia = ndvi2.subtract(ndvi1).rename('NDVI_DIFF')
 
-        region = ee.Geometry.Rectangle([-74.5, -10.5, -74.0, -10.0])
         hist = diferencia.reduceRegion(
             reducer=ee.Reducer.histogram(maxBuckets=20),
             geometry=region,
             scale=120,
             maxPixels=1e13
-        )
+        ).getInfo()
 
-        return jsonify(hist.get('NDVI_DIFF').getInfo())
+        if not hist.get('NDVI_DIFF'):
+            return jsonify({'error': 'No se encontraron datos de diferencia NDVI en la región'}), 400
+
+        return jsonify(hist.get('NDVI_DIFF'))
 
     except Exception as e:
         return jsonify({'error': f'Error al calcular histograma: {str(e)}'}), 500
+
+    except Exception as e:
+        return jsonify({'error': f'Error al calcular histograma: {str(e)}'}), 500
+
 
 if __name__ == '__main__':
     app.run(port=8080)
