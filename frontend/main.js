@@ -46,8 +46,23 @@ function limpiarMapa() {
 async function compararNDVI() {
   const date1 = formatDate(document.getElementById("start-date").value);
   const date2 = formatDate(document.getElementById("end-date").value);
-  const res1 = await fetch(`http://127.0.0.1:8080/gee-tile-url?date=${date1}`);
-  const res2 = await fetch(`http://127.0.0.1:8080/gee-tile-url?date=${date2}`);
+
+  const min = -0.2;
+  const max = 0.8;
+  const palette = [
+    '#762a83', '#af8dc3', '#e7d4e8',
+    '#d9f0d3', '#7fbf7b', '#1b7837'
+  ];
+
+  const params1 = new URLSearchParams({ date: date1, min: min, max: max });
+  const params2 = new URLSearchParams({ date: date2, min: min, max: max });
+  palette.forEach(p => {
+    params1.append('palette', p);
+    params2.append('palette', p);
+  });
+
+  const res1 = await fetch(`http://127.0.0.1:8080/gee-tile-url?${params1.toString()}`);
+  const res2 = await fetch(`http://127.0.0.1:8080/gee-tile-url?${params2.toString()}`);
   const data1 = await res1.json();
   const data2 = await res2.json();
 
@@ -215,6 +230,66 @@ async function mostrarEstadisticasDesdePoligono() {
   document.getElementById("stats-panel").style.display = "block";
 }
 
+async function mostrarHistogramaNDVI() {
+  const date1 = formatDate(document.getElementById("start-date").value);
+  const date2 = formatDate(document.getElementById("end-date").value);
+  const geojson = drawnItems.toGeoJSON();
+
+  if (!geojson.features.length) {
+    alert("Primero dibuja un polígono.");
+    return;
+  }
+
+  const geometry = geojson.features[0].geometry;
+
+  try {
+    const res = await fetch('http://127.0.0.1:8080/gee-ndvi-histogram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date1, date2, geometry })
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      alert("Error: " + data.error);
+      return;
+    }
+
+    // Mostrar histograma en consola (o integrar librería de gráficos)
+    console.log("Histograma NDVI_DIFF:", data);
+    alert("Histograma recibido. Ver consola para análisis.");
+
+  } catch (err) {
+    console.error("Error al obtener histograma:", err);
+    alert("No se pudo calcular el histograma.");
+  }
+}
+
+
+document.getElementById('btn-fechas-landsat').addEventListener('click', async () => {
+  const ndviDate = document.getElementById('ndvi-date').value;
+  const yearStr = ndviDate.slice(0, 4);
+
+  try {
+    const response = await fetch(`http://127.0.0.1:8080/gee-landsat-dates?date=${yearStr}0101`);
+    const data = await response.json();
+
+    if (data.error) {
+      alert('Error: ' + data.error);
+      return;
+    }
+
+    const fechas = data.landsat_dates;
+    const lista = fechas.map(f => `• ${f}`).join('\n');
+
+    alert(`Fechas de imágenes Landsat para ${data.year}:\n\n${lista}`);
+  } catch (err) {
+    alert('No se pudo obtener las fechas de imágenes Landsat.');
+    console.error(err);
+  }
+});
+
+
 // Enlaces a botones
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-comparar-ndvi").addEventListener("click", compararNDVI);
@@ -226,4 +301,6 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-dibujar").addEventListener("click", activarDibujo);
   document.getElementById("btn-descargar").addEventListener("click", descargarGeoJSON);
   document.getElementById("btn-capturar").addEventListener("click", capturarMapa);
+  document.getElementById("btn-histograma-ndvi").addEventListener("click", mostrarHistogramaNDVI);
+
 });
