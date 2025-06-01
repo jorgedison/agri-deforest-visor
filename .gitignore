@@ -28,3 +28,6 @@ earthengine-credentials.json
 # Otros
 .DS_Store
 
+#backend/Dockerfile
+#docker-compose.yml
+#frontend/Dockerfile
