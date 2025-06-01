@@ -61,8 +61,8 @@ async function compararNDVI() {
     params2.append('palette', p);
   });
 
-  const res1 = await fetch(`http://127.0.0.1:8080/gee-tile-url?${params1.toString()}`);
-  const res2 = await fetch(`http://127.0.0.1:8080/gee-tile-url?${params2.toString()}`);
+  const res1 = await fetch(`http://23.23.124.226:5000/gee-tile-url?${params1.toString()}`);
+  const res2 = await fetch(`http://23.23.124.226:5000/gee-tile-url?${params2.toString()}`);
   const data1 = await res1.json();
   const data2 = await res2.json();
 
@@ -77,7 +77,7 @@ async function compararNDVI() {
 async function detectarDiferencia() {
   const date1 = formatDate(document.getElementById("start-date").value);
   const date2 = formatDate(document.getElementById("end-date").value);
-  const res = await fetch(`http://127.0.0.1:8080/gee-ndvi-diff?date1=${date1}&date2=${date2}`);
+  const res = await fetch(`http://23.23.124.226:5000/gee-ndvi-diff?date1=${date1}&date2=${date2}`);
   const data = await res.json();
   limpiarMapa();
   L.tileLayer(data.tileUrl).addTo(map);
@@ -90,7 +90,7 @@ async function detectarZonas() {
   const date2 = formatDate(document.getElementById("end-date").value);
   const threshold = document.getElementById("threshold").value;
   const b = map.getBounds();
-  const url = `http://127.0.0.1:8080/gee-deforestation-zones?date1=${date1}&date2=${date2}&threshold=${threshold}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+  const url = `http://23.23.124.226:5000/gee-deforestation-zones?date1=${date1}&date2=${date2}&threshold=${threshold}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
   const res = await fetch(url);
   const data = await res.json();
   deforestationLayer.clearLayers();
@@ -101,7 +101,7 @@ async function detectarZonas() {
 async function mostrarEstadisticas() {
   const date = formatDate(document.getElementById("ndvi-date").value);
   const b = map.getBounds();
-  const url = `http://127.0.0.1:8080/gee-ndvi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+  const url = `http://23.23.124.226:5000/gee-ndvi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
   const res = await fetch(url);
   const data = await res.json();
   document.getElementById("stats-year").textContent = data.year;
@@ -192,7 +192,7 @@ async function mostrarEstadisticasDesdePoligono() {
 
   const geometry = geojson.features[0].geometry;
 
-  const res = await fetch('http://127.0.0.1:8080/gee-ndvi-stats-from-geojson', {
+  const res = await fetch('http://23.23.124.226:5000/gee-ndvi-stats-from-geojson', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date: date, geometry: geometry })
@@ -243,7 +243,7 @@ async function mostrarHistogramaNDVI() {
   const geometry = geojson.features[0].geometry;
 
   try {
-    const res = await fetch('http://127.0.0.1:8080/gee-ndvi-histogram', {
+    const res = await fetch('http://23.23.124.226:5000/gee-ndvi-histogram', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ date1, date2, geometry })
@@ -271,7 +271,7 @@ document.getElementById('btn-fechas-landsat').addEventListener('click', async ()
   const yearStr = ndviDate.slice(0, 4);
 
   try {
-    const response = await fetch(`http://127.0.0.1:8080/gee-landsat-dates?date=${yearStr}0101`);
+    const response = await fetch(`http://23.23.124.226:5000/gee-landsat-dates?date=${yearStr}0101`);
     const data = await response.json();
 
     if (data.error) {
