@@ -47,15 +47,4 @@ cd frontend
 http-server -p 8081
 ```
 
-Abre tu navegador en `http://localhost:8081`.
-
----
-
-## 🧠 Funcionalidades
-
-- Visualización del NDVI de una fecha específica
-- Comparación temporal de NDVI
-- Detección de zonas deforestadas (con visualización en GeoJSON)
-- Herramientas interactivas: dibujo, limpieza y descarga del área
-
 ![Vista previa del visor](assets/2025-05-05_02-13-32.png)
