@@ -9,7 +9,7 @@ import Graphic from "https://js.arcgis.com/4.29/@arcgis/core/Graphic.js";
 import Swipe from "https://js.arcgis.com/4.29/@arcgis/core/widgets/Swipe.js";
 import Polygon from "https://js.arcgis.com/4.29/@arcgis/core/geometry/Polygon.js";
 
-esriConfig.apiKey = "xxxxxxxxxxxxxxxxxxxxxx";
+esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurLLBUp7pCsFtV1nmEHDHFltOkdXwbTgwUP67AXZzMFdb4RMmek6nV9JhxM6IvZ0si3zTgZL-hnpzypb7cQ1bkduuTZpzaq2TTOrdxvrdfHu5UAWNMZhQsdRoLHCRfgalC1Twsy-4LlZGHTIe6mTs3BktCY8KgZiqQSAWqIAbKCHXPKra6xFpbtpRxwkvTJ_numW-Smt4_2Ne3a44Id2GP6k.AT1_faXq8Bgj";
 
 const graphicsLayer = new GraphicsLayer();
 
