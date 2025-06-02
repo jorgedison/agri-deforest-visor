@@ -48,7 +48,37 @@ def buscar_ndvi_anual(fecha):
 
     coleccion_ndvi = coleccion.map(calcular_ndvi)
     ndvi_anual = coleccion_ndvi.mean().rename('NDVI')
+    ndvi_anual = ndvi_anual.clamp(-0.1, 0.9)
     return ndvi_anual
+
+# Construir un mosaico SAVI promedio para un año
+def buscar_savi_anual(fecha, L=0.5):
+    anio = fecha[:4]
+    start = f"{anio}-01-01"
+    end = f"{anio}-12-31"
+
+    coleccion = (
+        ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+        .filterDate(start, end)
+        .filterMetadata('CLOUD_COVER', 'less_than', 50)
+    )
+
+    def calcular_savi(img):
+        pixel_qa = img.select('QA_PIXEL')
+        clear_mask = pixel_qa.bitwiseAnd(1 << 3).eq(0).And(
+                      pixel_qa.bitwiseAnd(1 << 4).eq(0))
+
+        nir = reflectance(img, 'SR_B5')
+        red = reflectance(img, 'SR_B4')
+        savi = nir.subtract(red).multiply(1 + L).divide(nir.add(red).add(L)).rename('SAVI')
+        savi_clamped = savi.clamp(-1, 1)
+
+        return savi_clamped.updateMask(clear_mask)
+
+    coleccion_savi = coleccion.map(calcular_savi)
+    savi_anual = coleccion_savi.mean().rename('SAVI')
+    savi_anual = savi_anual.clamp(-0.1, 0.9)
+    return savi_anual
 
 
 
@@ -91,10 +121,14 @@ def get_tile_url():
     except Exception as e:
         return jsonify({'error': f'Error inesperado: {str(e)}'}), 500
 
-
 @app.route('/gee-ndvi-stats')
 def ndvi_stats():
     date = request.args.get('date')
+    try:
+        datetime.datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({'error': 'Fecha inválida. Use formato YYYY-MM-DD'}), 400
+
     try:
         minx = float(request.args.get('minx'))
         miny = float(request.args.get('miny'))
@@ -103,14 +137,12 @@ def ndvi_stats():
     except (TypeError, ValueError):
         return jsonify({'error': 'Parámetros de región inválidos'}), 400
 
-    if not date:
-        return jsonify({'error': 'Falta parámetro date'}), 400
-
     try:
         ndvi = buscar_ndvi_anual(date)
         region = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
+        ndvi_clipped = ndvi.clip(region)
 
-        stats = ndvi.reduceRegion(
+        stats = ndvi_clipped.reduceRegion(
             reducer=ee.Reducer.mean()
                 .combine(ee.Reducer.minMax(), sharedInputs=True)
                 .combine(ee.Reducer.stdDev(), sharedInputs=True)
@@ -125,15 +157,17 @@ def ndvi_stats():
 
         return jsonify({
             'year': int(date[:4]),
-            'mean': stats['NDVI_mean'],
-            'min': stats['NDVI_min'],
-            'max': stats['NDVI_max'],
-            'stdDev': stats['NDVI_stdDev'],
-            'count': stats['NDVI_count']
+            'mean': stats.get('NDVI_mean', 0),
+            'min': stats.get('NDVI_min', 0),
+            'max': stats.get('NDVI_max', 0),
+            'stdDev': stats.get('NDVI_stdDev', 0),
+            'count': stats.get('NDVI_count', 0)
         })
 
     except Exception as e:
+        logging.exception("Error en estadísticas NDVI")
         return jsonify({'error': f'Error al calcular estadísticas NDVI: {str(e)}'}), 500
+
 
 
 @app.route('/gee-ndvi-diff')
@@ -215,9 +249,23 @@ def ndvi_stats_from_geojson():
         return jsonify({'error': 'Faltan parámetros'}), 400
 
     try:
-        region = ee.Geometry(geojson)
+        datetime.datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({'error': 'Fecha inválida. Use formato YYYY-MM-DD'}), 400
+
+    try:
+        # Soporte para FeatureCollection o geometría directa
+        if geojson.get('type') == 'FeatureCollection':
+            region = ee.FeatureCollection(geojson).geometry()
+        elif geojson.get('type') == 'Feature':
+            region = ee.Feature(geojson).geometry()
+        else:
+            region = ee.Geometry(geojson)
+
         ndvi = buscar_ndvi_anual(date)
-        stats = ndvi.reduceRegion(
+        ndvi_clipped = ndvi.clip(region)
+
+        stats = ndvi_clipped.reduceRegion(
             reducer=ee.Reducer.mean()
                 .combine(ee.Reducer.minMax(), sharedInputs=True)
                 .combine(ee.Reducer.stdDev(), sharedInputs=True)
@@ -232,14 +280,15 @@ def ndvi_stats_from_geojson():
 
         return jsonify({
             'year': int(date[:4]),
-            'mean': stats['NDVI_mean'],
-            'min': stats['NDVI_min'],
-            'max': stats['NDVI_max'],
-            'stdDev': stats['NDVI_stdDev'],
-            'count': stats['NDVI_count']
+            'mean': stats.get('NDVI_mean', 0),
+            'min': stats.get('NDVI_min', 0),
+            'max': stats.get('NDVI_max', 0),
+            'stdDev': stats.get('NDVI_stdDev', 0),
+            'count': stats.get('NDVI_count', 0)
         })
 
     except Exception as e:
+        logging.exception("Error en /gee-ndvi-stats-from-geojson")
         return jsonify({'error': str(e)}), 500
 
 
@@ -276,6 +325,102 @@ def ndvi_histograma():
 
     except Exception as e:
         return jsonify({'error': f'Error al calcular histograma: {str(e)}'}), 500
+
+@app.route('/gee-savi-stats')
+def savi_stats():
+    date = request.args.get('date')
+    try:
+        datetime.datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({'error': 'Fecha inválida. Use formato YYYY-MM-DD'}), 400
+
+    try:
+        minx = float(request.args.get('minx'))
+        miny = float(request.args.get('miny'))
+        maxx = float(request.args.get('maxx'))
+        maxy = float(request.args.get('maxy'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Parámetros de región inválidos'}), 400
+
+    try:
+        savi = buscar_savi_anual(date)
+        region = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
+        savi_clipped = savi.clip(region)
+
+        stats = savi_clipped.reduceRegion(
+            reducer=ee.Reducer.mean()
+                .combine(ee.Reducer.minMax(), sharedInputs=True)
+                .combine(ee.Reducer.stdDev(), sharedInputs=True)
+                .combine(ee.Reducer.count(), sharedInputs=True),
+            geometry=region,
+            scale=30,
+            maxPixels=1e13
+        ).getInfo()
+
+        if stats.get('SAVI_mean') is None:
+            return jsonify({'error': 'No se encontraron datos SAVI en la región seleccionada'}), 400
+
+        return jsonify({
+            'year': int(date[:4]),
+            'mean': stats['SAVI_mean'],
+            'min': stats['SAVI_min'],
+            'max': stats['SAVI_max'],
+            'stdDev': stats['SAVI_stdDev'],
+            'count': stats['SAVI_count']
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Error al calcular estadísticas SAVI: {str(e)}'}), 500
+
+@app.route('/gee-savi-stats-from-geojson', methods=['POST'])
+def savi_stats_from_geojson():
+    data = request.get_json()
+    date = data.get('date')
+    geojson = data.get('geometry')
+
+    if not date or not geojson:
+        return jsonify({'error': 'Faltan parámetros'}), 400
+
+    try:
+        datetime.datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({'error': 'Fecha inválida. Use formato YYYY-MM-DD'}), 400
+
+    try:
+        if geojson.get('type') == 'FeatureCollection':
+            region = ee.FeatureCollection(geojson).geometry()
+        elif geojson.get('type') == 'Feature':
+            region = ee.Feature(geojson).geometry()
+        else:
+            region = ee.Geometry(geojson)
+
+        savi = buscar_savi_anual(date)
+        savi_clipped = savi.clip(region)
+
+        stats = savi_clipped.reduceRegion(
+            reducer=ee.Reducer.mean()
+                .combine(ee.Reducer.minMax(), sharedInputs=True)
+                .combine(ee.Reducer.stdDev(), sharedInputs=True)
+                .combine(ee.Reducer.count(), sharedInputs=True),
+            geometry=region,
+            scale=30,
+            maxPixels=1e13
+        ).getInfo()
+
+        if stats.get('SAVI_mean') is None:
+            return jsonify({'error': 'No se encontraron datos SAVI en el polígono especificado'}), 400
+
+        return jsonify({
+            'year': int(date[:4]),
+            'mean': stats['SAVI_mean'],
+            'min': stats['SAVI_min'],
+            'max': stats['SAVI_max'],
+            'stdDev': stats['SAVI_stdDev'],
+            'count': stats['SAVI_count']
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Error al calcular estadísticas SAVI desde área: {str(e)}'}), 500
 
 
 if __name__ == '__main__':

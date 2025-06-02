@@ -99,18 +99,72 @@ async function detectarZonas() {
 }
 
 async function mostrarEstadisticas() {
-  const date = formatDate(document.getElementById("ndvi-date").value);
+  const date = document.getElementById("ndvi-date").value;
   const b = map.getBounds();
   const url = `http://23.23.124.226:5000/gee-ndvi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
   const res = await fetch(url);
   const data = await res.json();
+
+  if (data.error) {
+    alert("Error: " + data.error);
+    return;
+  }
+
+  const mean = data.mean;
+  const ctx = document.getElementById('ndviChart').getContext('2d');
+
+  if (window.ndviChart instanceof Chart) {
+  	window.ndviChart.destroy();
+  }
+
+  window.ndviChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['NDVI'],
+      datasets: [{
+        label: 'Promedio',
+        data: [mean],
+        backgroundColor: getColorFromNDVI(mean),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          min: 0,
+          max: 1
+        }
+      }
+    }
+  });
+
+  // Mostrar texto
   document.getElementById("stats-year").textContent = data.year;
-  document.getElementById("stats-mean").textContent = data.mean.toFixed(3);
+  document.getElementById("stats-mean").textContent = mean.toFixed(3);
   document.getElementById("stats-min").textContent = data.min.toFixed(3);
   document.getElementById("stats-max").textContent = data.max.toFixed(3);
   document.getElementById("stats-std").textContent = data.stdDev.toFixed(3);
+  document.getElementById("stats-msg").textContent = interpretarNDVI(mean);
   document.getElementById("stats-panel").style.display = "block";
 }
+
+function interpretarNDVI(mean) {
+  if (mean >= 0.8) return "Vegetación muy densa 🌳";
+  if (mean >= 0.6) return "Vegetación densa 🌿";
+  if (mean >= 0.3) return "Vegetación media 🌱";
+  if (mean >= 0.1) return "Área degradada 🍂";
+  return "Área sin vegetación o suelo expuesto 🏜️";
+}
+
+function getColorFromNDVI(ndvi) {
+  if (ndvi >= 0.8) return '#006d2c';
+  if (ndvi >= 0.6) return '#31a354';
+  if (ndvi >= 0.3) return '#addd8e';
+  if (ndvi >= 0.1) return '#fcbba1';
+  return '#67000d';
+}
+
 
 function activarDibujo() {
   if (!map.drawControl) {
@@ -182,7 +236,7 @@ document.getElementById("input-geojson")?.addEventListener("change", function (e
 });
 
 async function mostrarEstadisticasDesdePoligono() {
-  const date = formatDate(document.getElementById("ndvi-date").value);
+  const date = document.getElementById("ndvi-date").value;
   const geojson = drawnItems.toGeoJSON();
 
   if (!geojson.features.length) {
@@ -204,31 +258,45 @@ async function mostrarEstadisticasDesdePoligono() {
     return;
   }
 
-  // Cambiar estilo del polígono dibujado según el promedio NDVI
-  let color = '#00cc00'; // verde por defecto
-  let mensaje = 'Vegetación saludable';
-  if (data.mean < 0.4) {
-    color = '#ff0000'; // rojo si bajo NDVI
-    mensaje = '⚠ Posible deforestación';
-  } else if (data.mean < 0.6) {
-    color = '#ffcc00'; // amarillo si intermedio
-    mensaje = 'Vegetación intermedia';
+  const mean = data.mean;
+  const ctx = document.getElementById('ndviChart').getContext('2d');
+
+  if (window.ndviChart instanceof Chart) {
+    window.ndviChart.destroy();
   }
 
-  drawnItems.eachLayer(layer => {
-    if (layer instanceof L.Polygon) {
-      layer.setStyle({ color: color, weight: 3, fillOpacity: 0.3 });
+  window.ndviChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['NDVI'],
+      datasets: [{
+        label: 'Promedio',
+        data: [mean],
+        backgroundColor: getColorFromNDVI(mean),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          min: 0,
+          max: 1
+        }
+      }
     }
   });
 
+  // Mostrar datos en el panel
   document.getElementById("stats-year").textContent = data.year;
-  document.getElementById("stats-mean").textContent = data.mean.toFixed(3);
+  document.getElementById("stats-mean").textContent = mean.toFixed(3);
   document.getElementById("stats-min").textContent = data.min.toFixed(3);
   document.getElementById("stats-max").textContent = data.max.toFixed(3);
   document.getElementById("stats-std").textContent = data.stdDev.toFixed(3);
-  document.getElementById("stats-msg").textContent = mensaje;
+  document.getElementById("stats-msg").textContent = interpretarNDVI(mean);
   document.getElementById("stats-panel").style.display = "block";
 }
+
 
 async function mostrarHistogramaNDVI() {
   const date1 = formatDate(document.getElementById("start-date").value);
@@ -290,6 +358,133 @@ document.getElementById('btn-fechas-landsat').addEventListener('click', async ()
 });
 
 
+async function mostrarEstadisticasSAVI() {
+  const date = document.getElementById("ndvi-date").value;
+  const b = map.getBounds();
+  const url = `http://23.23.124.226:5000/gee-savi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.error) {
+    alert("Error: " + data.error);
+    return;
+  }
+
+  const mean = data.mean;
+  const ctx = document.getElementById('ndviChart').getContext('2d');
+
+  if (window.ndviChart instanceof Chart) {
+    window.ndviChart.destroy();
+  }
+
+  window.ndviChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['SAVI'],
+      datasets: [{
+        label: 'Promedio',
+        data: [mean],
+        backgroundColor: '#4b9cd3', // Color neutro para SAVI
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: { min: 0, max: 1 }
+      }
+    }
+  });
+
+  document.getElementById("stats-year").textContent = data.year;
+  document.getElementById("stats-mean").textContent = mean.toFixed(3);
+  document.getElementById("stats-min").textContent = data.min.toFixed(3);
+  document.getElementById("stats-max").textContent = data.max.toFixed(3);
+  document.getElementById("stats-std").textContent = data.stdDev.toFixed(3);
+  document.getElementById("stats-msg").textContent = interpretarSAVI(mean);
+  document.getElementById("stats-panel").style.display = "block";
+}
+
+async function mostrarEstadisticasSAVIDesdePoligono() {
+  const date = document.getElementById("ndvi-date").value;
+  const geojson = drawnItems.toGeoJSON();
+
+  if (!geojson.features.length) {
+    alert("Primero dibuja un polígono.");
+    return;
+  }
+
+  const geometry = geojson.features[0].geometry;
+
+  const res = await fetch('http://23.23.124.226:5000/gee-savi-stats-from-geojson', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date: date, geometry: geometry })
+  });
+
+  const data = await res.json();
+  if (data.error) {
+    alert("Error: " + data.error);
+    return;
+  }
+
+  const mean = data.mean;
+  const ctx = document.getElementById('ndviChart').getContext('2d');
+
+  if (window.ndviChart instanceof Chart) {
+    window.ndviChart.destroy();
+  }
+
+  window.ndviChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['SAVI'],
+      datasets: [{
+        label: 'Promedio',
+        data: [mean],
+        backgroundColor: getColorFromSAVI(mean),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          min: 0,
+          max: 1
+        }
+      }
+    }
+  });
+
+  // Mostrar datos en el panel
+  document.getElementById("stats-year").textContent = data.year;
+  document.getElementById("stats-mean").textContent = mean.toFixed(3);
+  document.getElementById("stats-min").textContent = data.min.toFixed(3);
+  document.getElementById("stats-max").textContent = data.max.toFixed(3);
+  document.getElementById("stats-std").textContent = data.stdDev.toFixed(3);
+  document.getElementById("stats-msg").textContent = interpretarSAVI(mean);
+  document.getElementById("stats-panel").style.display = "block";
+}
+
+
+function interpretarSAVI(mean) {
+  if (mean >= 0.8) return "Cobertura vegetal muy alta 🌳";
+  if (mean >= 0.6) return "Vegetación moderada 🌿";
+  if (mean >= 0.3) return "Vegetación escasa 🌱";
+  if (mean >= 0.1) return "Zona alterada o degradada 🍂";
+  return "Suelo desnudo o sin vegetación 🏜️";
+}
+
+
+function getColorFromSAVI(savi) {
+  if (savi >= 0.8) return '#00441b';
+  if (savi >= 0.6) return '#2a924a';
+  if (savi >= 0.3) return '#a1d99b';
+  if (savi >= 0.1) return '#fed976';
+  return '#800026';
+}
+
 // Enlaces a botones
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-comparar-ndvi").addEventListener("click", compararNDVI);
@@ -302,5 +497,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-descargar").addEventListener("click", descargarGeoJSON);
   document.getElementById("btn-capturar").addEventListener("click", capturarMapa);
   document.getElementById("btn-histograma-ndvi").addEventListener("click", mostrarHistogramaNDVI);
+  document.getElementById("btn-stats-savi").addEventListener("click", mostrarEstadisticasSAVI);
+  document.getElementById("btn-stats-savi-poly").addEventListener("click", mostrarEstadisticasSAVIDesdePoligono);
 
 });

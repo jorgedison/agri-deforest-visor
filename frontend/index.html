@@ -10,6 +10,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div id="controls">
@@ -32,19 +33,21 @@
       <button id="btn-detectar">Diferencia NDVI</button>
       <button id="btn-zonas">Zonas deforestadas</button>
       <button id="btn-stats">Estadísticas NDVI</button>
-	  <button id="btn-histograma-ndvi">Histograma de cambios NDVI</button>
+      <button id="btn-stats-savi">Estadísticas SAVI</button>
+      <button id="btn-histograma-ndvi">Histograma de cambios NDVI</button>
       <button id="btn-limpiar">Limpiar mapa</button>
       <button id="btn-dibujar">Dibujar área</button>
       <button id="btn-descargar">Descargar área (.json)</button>
       <button id="btn-capturar">Capturar visor (PNG)</button>
       <input type="file" id="input-geojson" accept=".json" />
-      <button id="btn-stats-poly">Estadísticas desde polígono</button>
-	  <button id="btn-fechas-landsat">Ver fechas Landsat</button>
+      <button id="btn-stats-poly">Estadísticas NDVI desde polígono</button>
+      <button id="btn-stats-savi-poly">Estadísticas SAVI desde Polígono</button>
+      <button id="btn-fechas-landsat">Ver fechas Landsat</button>
 
     </div>
 
     <div id="legend" style="display:none">
-      <p><strong>Leyenda NDVI:</strong></p>
+      <p><strong>Leyenda:</strong></p>
       <div class="palette">
         <span style="background:#67000d"></span>
         <span style="background:#fcbba1"></span>
@@ -55,16 +58,18 @@
     </div>
 
     <p id="layer-label">Capa activa: -</p>
+    
+    	<div id="stats-panel" style="display:none">
+  	<h3>Estadísticas</h3>
+  	<canvas id="ndviChart" width="400" height="200"></canvas>
+  	<p><strong>Año:</strong> <span id="stats-year">-</span></p>
+  	<p><strong>Promedio:</strong> <span id="stats-mean">-</span></p>
+  	<p><strong>Mínimo:</strong> <span id="stats-min">-</span></p>
+  	<p><strong>Máximo:</strong> <span id="stats-max">-</span></p>
+  	<p><strong>Desv. Est.:</strong> <span id="stats-std">-</span></p>
+  	<p id="stats-msg" style="font-weight: bold; margin-top: 10px;"></p>
+	</div>
 
-    <div id="stats-panel" style="display:none">
-      <h3>Estadísticas NDVI</h3>
-      <p><strong>Año:</strong> <span id="stats-year">-</span></p>
-      <p><strong>Promedio:</strong> <span id="stats-mean">-</span></p>
-      <p><strong>Mínimo:</strong> <span id="stats-min">-</span></p>
-      <p><strong>Máximo:</strong> <span id="stats-max">-</span></p>
-      <p><strong>Desv. Est.:</strong> <span id="stats-std">-</span></p>
-      <p id="stats-msg" style="font-weight: bold; margin-top: 10px;"></p>
-    </div>
   </div>
 
   <div id="map"></div>

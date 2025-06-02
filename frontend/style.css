@@ -93,3 +93,12 @@ body {
   font-size: 13px;
   color: #333;
 }
+
+#stats-panel {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 15px;
+  background: #f9f9f9;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
