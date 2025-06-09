@@ -1,6 +1,5 @@
-// main.js actualizado
-
 const map = L.map("map").setView([-9.2, -75.15], 6);
+const BASE_URL = "http://23.23.124.226:5000";
 
 L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -61,8 +60,8 @@ async function compararNDVI() {
     params2.append('palette', p);
   });
 
-  const res1 = await fetch(`http://23.23.124.226:5000/gee-tile-url?${params1.toString()}`);
-  const res2 = await fetch(`http://23.23.124.226:5000/gee-tile-url?${params2.toString()}`);
+  const res1 = await fetch(`${BASE_URL}/gee-tile-url?${params1.toString()}`);
+  const res2 = await fetch(`${BASE_URL}/gee-tile-url?${params2.toString()}`);
   const data1 = await res1.json();
   const data2 = await res2.json();
 
@@ -77,12 +76,52 @@ async function compararNDVI() {
 async function detectarDiferencia() {
   const date1 = formatDate(document.getElementById("start-date").value);
   const date2 = formatDate(document.getElementById("end-date").value);
-  const res = await fetch(`http://23.23.124.226:5000/gee-ndvi-diff?date1=${date1}&date2=${date2}`);
-  const data = await res.json();
-  limpiarMapa();
-  L.tileLayer(data.tileUrl).addTo(map);
-  document.getElementById("layer-label").textContent = data.name;
-  document.getElementById("legend").style.display = "block";
+
+  // Obtener el bounding box actual del mapa
+  const bounds = map.getBounds();
+  const minx = bounds.getWest();
+  const miny = bounds.getSouth();
+  const maxx = bounds.getEast();
+  const maxy = bounds.getNorth();
+
+  // Puedes ajustar el umbral si deseas
+  const threshold = -0.02;
+
+  const url = `${BASE_URL}/gee-ndvi-diff?date1=${date1}&date2=${date2}&minx=${minx}&miny=${miny}&maxx=${maxx}&maxy=${maxy}&threshold=${threshold}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (res.ok && data.tileUrl) {
+      limpiarMapa();
+      L.tileLayer(data.tileUrl).addTo(map);
+      document.getElementById("layer-label").textContent = data.name;
+      document.getElementById("legend").style.display = "block";
+
+      // Mostrar alerta si se detecta deforestación
+      if (data.deforestationDetected) {
+        alert(`⚠️ Se detectó posible deforestación entre ${data.yearBase} y ${data.yearFinal}.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
+      } else {
+        alert(`✅ No se detectó deforestación significativa.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
+      }
+
+    } else {
+      console.error('Respuesta inesperada del servidor:', data);
+      alert("Error al cargar el mapa de diferencias NDVI.");
+    }
+  } catch (error) {
+    console.error("Error en detectarDiferencia:", error);
+    alert("Ocurrió un error al procesar la diferencia NDVI.");
+  }
+}
+
+
+function calcularAreaEnKm2(bounds) {
+  const R = 6371; // radio tierra en km
+  const latDiff = bounds.getNorth() - bounds.getSouth();
+  const lonDiff = bounds.getEast() - bounds.getWest();
+  return R * R * Math.abs(latDiff * lonDiff);
 }
 
 async function detectarZonas() {
@@ -90,18 +129,53 @@ async function detectarZonas() {
   const date2 = formatDate(document.getElementById("end-date").value);
   const threshold = document.getElementById("threshold").value;
   const b = map.getBounds();
-  const url = `http://23.23.124.226:5000/gee-deforestation-zones?date1=${date1}&date2=${date2}&threshold=${threshold}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  deforestationLayer.clearLayers();
-  deforestationLayer.addData(data);
-  document.getElementById("layer-label").textContent = "Zonas deforestadas";
+  const areaKm2 = calcularAreaEnKm2(b);
+
+  const statusDiv = document.getElementById("status-message");
+  statusDiv.textContent = "";
+  statusDiv.style.display = "none";
+
+  if (areaKm2 > 10000) {
+    statusDiv.textContent = `⚠️ El área seleccionada es demasiado grande (${Math.round(areaKm2)} km²). Haz más zoom (máx: 10,000 km²).`;
+    statusDiv.style.display = "block";
+    return;
+  }
+
+  try {
+    const url = `${BASE_URL}/gee-deforestation-zones?date1=${date1}&date2=${date2}&threshold=${threshold}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.error) {
+      statusDiv.textContent = "❌ " + data.error;
+      statusDiv.style.display = "block";
+      return;
+    }
+
+    if (!data.features || data.features.length === 0) {
+      statusDiv.textContent = "✅ No se encontraron zonas deforestadas en el área seleccionada.";
+      statusDiv.style.display = "block";
+    } else {
+      statusDiv.textContent = `✅ Se detectaron ${data.deforestationSummary?.zoneCount || data.features.length} zonas deforestadas (${data.deforestationSummary?.percentageAffected || 'N/A'}% del área).`;
+      statusDiv.style.display = "block";
+    }
+
+    deforestationLayer.clearLayers();
+    deforestationLayer.addData(data);
+    document.getElementById("layer-label").textContent = "Zonas deforestadas";
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.textContent = "❌ Ocurrió un error inesperado al detectar zonas deforestadas.";
+    statusDiv.style.display = "block";
+  }
 }
+
 
 async function mostrarEstadisticas() {
   const date = document.getElementById("ndvi-date").value;
   const b = map.getBounds();
-  const url = `http://23.23.124.226:5000/gee-ndvi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+  const url = `${BASE_URL}/gee-ndvi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
   const res = await fetch(url);
   const data = await res.json();
 
@@ -114,7 +188,7 @@ async function mostrarEstadisticas() {
   const ctx = document.getElementById('ndviChart').getContext('2d');
 
   if (window.ndviChart instanceof Chart) {
-  	window.ndviChart.destroy();
+        window.ndviChart.destroy();
   }
 
   window.ndviChart = new Chart(ctx, {
@@ -311,7 +385,7 @@ async function mostrarHistogramaNDVI() {
   const geometry = geojson.features[0].geometry;
 
   try {
-    const res = await fetch('http://23.23.124.226:5000/gee-ndvi-histogram', {
+    const res = await fetch('${BASE_URL}/gee-ndvi-histogram', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ date1, date2, geometry })
@@ -339,7 +413,7 @@ document.getElementById('btn-fechas-landsat').addEventListener('click', async ()
   const yearStr = ndviDate.slice(0, 4);
 
   try {
-    const response = await fetch(`http://23.23.124.226:5000/gee-landsat-dates?date=${yearStr}0101`);
+    const response = await fetch(`${BASE_URL}/gee-landsat-dates?date=${yearStr}0101`);
     const data = await response.json();
 
     if (data.error) {
@@ -361,7 +435,7 @@ document.getElementById('btn-fechas-landsat').addEventListener('click', async ()
 async function mostrarEstadisticasSAVI() {
   const date = document.getElementById("ndvi-date").value;
   const b = map.getBounds();
-  const url = `http://23.23.124.226:5000/gee-savi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
+  const url = `${BASE_URL}/gee-savi-stats?date=${date}&minx=${b.getWest()}&miny=${b.getSouth()}&maxx=${b.getEast()}&maxy=${b.getNorth()}`;
   const res = await fetch(url);
   const data = await res.json();
 
@@ -416,7 +490,7 @@ async function mostrarEstadisticasSAVIDesdePoligono() {
 
   const geometry = geojson.features[0].geometry;
 
-  const res = await fetch('http://23.23.124.226:5000/gee-savi-stats-from-geojson', {
+  const res = await fetch('${BASE_URL}/gee-savi-stats-from-geojson', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date: date, geometry: geometry })

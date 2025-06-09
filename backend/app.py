@@ -81,7 +81,6 @@ def buscar_savi_anual(fecha, L=0.5):
     return savi_anual
 
 
-
 @app.route('/gee-tile-url')
 def get_tile_url():
     date = request.args.get('date')
@@ -113,13 +112,21 @@ def get_tile_url():
 
         return jsonify({
             'name': f'NDVI promedio anual {date[:4]}',
-            'tileUrl': map_id_dict['tile_fetcher'].url_format
+            'tileUrl': map_id_dict['tile_fetcher'].url_format,
+            'minValue': min_val,
+            'maxValue': max_val,
+            'paletteUsed': palette,
+            'processingDate': datetime.datetime.utcnow().isoformat() + 'Z',
+            'year': int(date[:4]),
+            'source': 'LANDSAT/LC08/C02/T1_L2',
+            'legend': palette
         })
 
     except ee.ee_exception.EEException as e:
         return jsonify({'error': f'Error de Earth Engine: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': f'Error inesperado: {str(e)}'}), 500
+
 
 @app.route('/gee-ndvi-stats')
 def ndvi_stats():
@@ -169,40 +176,11 @@ def ndvi_stats():
         return jsonify({'error': f'Error al calcular estadísticas NDVI: {str(e)}'}), 500
 
 
-
 @app.route('/gee-ndvi-diff')
 def diferencia_ndvi():
     date1 = request.args.get('date1')
     date2 = request.args.get('date2')
-    if not date1 or not date2:
-        return jsonify({'error': 'Faltan parámetros date1 o date2'}), 400
-
-    try:
-        ndvi1 = buscar_ndvi_anual(date1)
-        ndvi2 = buscar_ndvi_anual(date2)
-        diferencia = ndvi2.subtract(ndvi1).rename('NDVI_DIFF')
-
-        vis_params = {
-            'min': -0.1,
-            'max': 0.1,
-            'palette': ['#762a83', '#af8dc3', '#e7d4e8', '#7fbf7b', '#1b7837']
-        }
-
-        map_id_dict = ee.data.getMapId({'image': diferencia.visualize(**vis_params)})
-
-        return jsonify({
-            'name': f'Cambios NDVI ({date1[:4]} → {date2[:4]})',
-            'tileUrl': map_id_dict['tile_fetcher'].url_format
-        })
-
-    except Exception as e:
-        return jsonify({'error': f'Error al calcular diferencia NDVI: {str(e)}'}), 500
-
-@app.route('/gee-deforestation-zones')
-def zonas_deforestadas():
-    date1 = request.args.get('date1')
-    date2 = request.args.get('date2')
-    threshold = float(request.args.get('threshold', 0.2))
+    threshold = float(request.args.get('threshold', -0.02))  # Umbral de deforestación
 
     try:
         minx = float(request.args.get('minx'))
@@ -210,32 +188,121 @@ def zonas_deforestadas():
         maxx = float(request.args.get('maxx'))
         maxy = float(request.args.get('maxy'))
     except (TypeError, ValueError):
-        return jsonify({'error': 'Debe proporcionar minx, miny, maxx, maxy'}), 400
+        return jsonify({'error': 'Debe proporcionar minx, miny, maxx y maxy'}), 400
 
     if not date1 or not date2:
-        return jsonify({'error': 'Faltan fechas date1 o date2'}), 400
+        return jsonify({'error': 'Faltan parámetros date1 o date2'}), 400
 
     try:
+        region = ee.Geometry.BBox(minx, miny, maxx, maxy)
+
+        # Obtener NDVI de cada año
+        ndvi1 = buscar_ndvi_anual(date1)
+        ndvi2 = buscar_ndvi_anual(date2)
+        diff = ndvi2.subtract(ndvi1).rename('NDVI_DIFF').clip(region)
+
+        # Visualización
+        vis_params = {
+            'min': -0.1,
+            'max': 0.1,
+            'palette': ['#762a83', '#af8dc3', '#e7d4e8', '#7fbf7b', '#1b7837']
+        }
+        visual = diff.visualize(**vis_params)
+        map_id = ee.data.getMapId({'image': visual})
+
+        # Estadísticas del cambio NDVI en la región
+        stats = diff.reduceRegion(
+            reducer=ee.Reducer.mean()
+                .combine(ee.Reducer.minMax(), sharedInputs=True)
+                .combine(ee.Reducer.stdDev(), sharedInputs=True)
+                .combine(ee.Reducer.count(), sharedInputs=True),
+            geometry=region,
+            scale=30,
+            maxPixels=1e13
+        ).getInfo()
+
+        mean_diff = stats.get('NDVI_DIFF_mean', 0)
+        deforestation_detected = mean_diff < threshold
+
+        return jsonify({
+            'name': f'Cambios NDVI ({date1[:4]} → {date2[:4]})',
+            'tileUrl': map_id['tile_fetcher'].url_format,
+            'paletteUsed': vis_params['palette'],
+            'processingDate': datetime.datetime.utcnow().isoformat() + 'Z',
+            'regionBBox': [minx, miny, maxx, maxy],
+            'ndviChangeStats': {
+                'mean': mean_diff,
+                'min': stats.get('NDVI_DIFF_min', 0),
+                'max': stats.get('NDVI_DIFF_max', 0),
+                'stdDev': stats.get('NDVI_DIFF_stdDev', 0),
+                'count': stats.get('NDVI_DIFF_count', 0)
+            },
+            'deforestationDetected': deforestation_detected,
+            'threshold': threshold,
+            'yearBase': int(date1[:4]),
+            'yearFinal': int(date2[:4])
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Error al calcular diferencia NDVI: {str(e)}'}), 500
+
+@app.route('/gee-deforestation-zones')
+def zonas_deforestadas():
+    try:
+        date1 = request.args.get('date1')
+        date2 = request.args.get('date2')
+        threshold = float(request.args.get('threshold', 0.2))
+
+        if not date1 or not date2:
+            return jsonify({'error': 'Faltan fechas date1 o date2'}), 400
+
+        minx = float(request.args.get('minx'))
+        miny = float(request.args.get('miny'))
+        maxx = float(request.args.get('maxx'))
+        maxy = float(request.args.get('maxy'))
+        region = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
+
         ndvi1 = buscar_ndvi_anual(date1)
         ndvi2 = buscar_ndvi_anual(date2)
         diff = ndvi1.subtract(ndvi2)
-        mask = diff.gte(threshold).selfMask()
-        region = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
+
+        ndvi_base_mask = ndvi1.gt(0.2)
+        mask = diff.gte(threshold).And(ndvi_base_mask).selfMask()
 
         vectorized = mask.reduceToVectors(
             geometry=region,
             geometryType='polygon',
             scale=90,
             maxPixels=1e13,
-            geometryInNativeProjection=False,
             bestEffort=True,
             tileScale=4,
+            geometryInNativeProjection=False,
             reducer=ee.Reducer.countEvery()
         )
 
-        return jsonify(vectorized.limit(5000).getInfo())
+        features = vectorized.limit(1000)
+        feature_collection = features.getInfo()
+        zone_count = len(feature_collection.get('features', []))
+
+        area_total = region.area().divide(1e6).getInfo()  # en km²
+        area_deforested = zone_count * (90 * 90) / 1e6     # en km² aprox
+        pct = (area_deforested / area_total) * 100 if area_total else 0
+
+        feature_collection['deforestationSummary'] = {
+            'zoneCount': zone_count,
+            'threshold': threshold,
+            'dateBase': date1,
+            'dateFinal': date2,
+            'regionBBox': [minx, miny, maxx, maxy],
+            'areaTotal_km2': round(area_total, 4),
+            'areaDeforested_km2': round(area_deforested, 4),
+            'percentageAffected': round(pct, 2)
+        }
+
+        return jsonify(feature_collection)
 
     except Exception as e:
+        logging.exception("Error en /gee-deforestation-zones")
         return jsonify({'error': f'Error al generar zonas deforestadas: {str(e)}'}), 500
 
 
@@ -275,16 +342,33 @@ def ndvi_stats_from_geojson():
             maxPixels=1e13
         ).getInfo()
 
-        if stats.get('NDVI_mean') is None:
+        ndvi_mean = stats.get('NDVI_mean')
+        if ndvi_mean is None:
             return jsonify({'error': 'No se encontraron datos NDVI en el polígono especificado'}), 400
+
+        # Clasificación del estado del área
+        if ndvi_mean >= 0.6:
+            status = "vegetacion_densa"
+            message = "Área con vegetación saludable"
+        elif ndvi_mean >= 0.3:
+            status = "vegetacion_media"
+            message = "Área con vegetación moderada"
+        elif ndvi_mean >= 0.1:
+            status = "posible_deforestacion"
+            message = "Área posiblemente degradada o deforestada"
+        else:
+            status = "deforestada"
+            message = "Área deforestada o sin vegetación"
 
         return jsonify({
             'year': int(date[:4]),
-            'mean': stats.get('NDVI_mean', 0),
-            'min': stats.get('NDVI_min', 0),
-            'max': stats.get('NDVI_max', 0),
-            'stdDev': stats.get('NDVI_stdDev', 0),
-            'count': stats.get('NDVI_count', 0)
+            'mean': round(ndvi_mean, 4),
+            'min': round(stats.get('NDVI_min', 0), 4),
+            'max': round(stats.get('NDVI_max', 0), 4),
+            'stdDev': round(stats.get('NDVI_stdDev', 0), 4),
+            'count': stats.get('NDVI_count', 0),
+            'status': status,
+            'message': message
         })
 
     except Exception as e:
