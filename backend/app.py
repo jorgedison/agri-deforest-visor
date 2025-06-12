@@ -162,13 +162,17 @@ def ndvi_stats():
         if stats.get('NDVI_mean') is None:
             return jsonify({'error': 'No se encontraron datos NDVI en la región seleccionada'}), 400
 
+        ndvi_mean = stats.get('NDVI_mean', 0)
+        deforestation_detected = ndvi_mean < 0.1
+
         return jsonify({
             'year': int(date[:4]),
-            'mean': stats.get('NDVI_mean', 0),
+            'mean': ndvi_mean,
             'min': stats.get('NDVI_min', 0),
             'max': stats.get('NDVI_max', 0),
             'stdDev': stats.get('NDVI_stdDev', 0),
-            'count': stats.get('NDVI_count', 0)
+            'count': stats.get('NDVI_count', 0),
+            'deforestationDetected': deforestation_detected
         })
 
     except Exception as e:
@@ -287,6 +291,7 @@ def zonas_deforestadas():
         area_total = region.area().divide(1e6).getInfo()  # en km²
         area_deforested = zone_count * (90 * 90) / 1e6     # en km² aprox
         pct = (area_deforested / area_total) * 100 if area_total else 0
+        deforestation_detected = zone_count > 0
 
         feature_collection['deforestationSummary'] = {
             'zoneCount': zone_count,
@@ -296,7 +301,8 @@ def zonas_deforestadas():
             'regionBBox': [minx, miny, maxx, maxy],
             'areaTotal_km2': round(area_total, 4),
             'areaDeforested_km2': round(area_deforested, 4),
-            'percentageAffected': round(pct, 2)
+            'percentageAffected': round(pct, 2),
+            'deforestationDetected': deforestation_detected
         }
 
         return jsonify(feature_collection)
@@ -304,7 +310,6 @@ def zonas_deforestadas():
     except Exception as e:
         logging.exception("Error en /gee-deforestation-zones")
         return jsonify({'error': f'Error al generar zonas deforestadas: {str(e)}'}), 500
-
 
 @app.route('/gee-ndvi-stats-from-geojson', methods=['POST'])
 def ndvi_stats_from_geojson():
@@ -321,7 +326,6 @@ def ndvi_stats_from_geojson():
         return jsonify({'error': 'Fecha inválida. Use formato YYYY-MM-DD'}), 400
 
     try:
-        # Soporte para FeatureCollection o geometría directa
         if geojson.get('type') == 'FeatureCollection':
             region = ee.FeatureCollection(geojson).geometry()
         elif geojson.get('type') == 'Feature':
@@ -346,7 +350,6 @@ def ndvi_stats_from_geojson():
         if ndvi_mean is None:
             return jsonify({'error': 'No se encontraron datos NDVI en el polígono especificado'}), 400
 
-        # Clasificación del estado del área
         if ndvi_mean >= 0.6:
             status = "vegetacion_densa"
             message = "Área con vegetación saludable"
@@ -360,6 +363,8 @@ def ndvi_stats_from_geojson():
             status = "deforestada"
             message = "Área deforestada o sin vegetación"
 
+        deforestation_detected = ndvi_mean < 0.1
+
         return jsonify({
             'year': int(date[:4]),
             'mean': round(ndvi_mean, 4),
@@ -368,12 +373,14 @@ def ndvi_stats_from_geojson():
             'stdDev': round(stats.get('NDVI_stdDev', 0), 4),
             'count': stats.get('NDVI_count', 0),
             'status': status,
-            'message': message
+            'message': message,
+            'deforestationDetected': deforestation_detected
         })
 
     except Exception as e:
         logging.exception("Error en /gee-ndvi-stats-from-geojson")
         return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/gee-ndvi-histogram', methods=['POST'])
