@@ -507,5 +507,38 @@ def savi_stats_from_geojson():
         return jsonify({'error': f'Error al calcular estadísticas SAVI desde área: {str(e)}'}), 500
 
 
+@app.route('/gee-landsat-dates')
+def landsat_dates():
+    try:
+        # Parámetros esperados
+        minx = float(request.args.get('minx'))
+        miny = float(request.args.get('miny'))
+        maxx = float(request.args.get('maxx'))
+        maxy = float(request.args.get('maxy'))
+        year = int(request.args.get('year', datetime.datetime.utcnow().year))
+
+        region = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
+
+        start = f"{year}-01-01"
+        end = f"{year}-12-31"
+
+        collection = (
+            ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+            .filterBounds(region)
+            .filterDate(start, end)
+            .filterMetadata('CLOUD_COVER', 'less_than', 50)
+            .sort('system:time_start')
+        )
+
+        dates = collection.aggregate_array('system:time_start').map(
+            lambda ts: ee.Date(ts).format("YYYY-MM-dd")
+        ).getInfo()
+
+        return jsonify({'dates': dates})
+
+    except Exception as e:
+        return jsonify({'error': f'Error al obtener fechas Landsat: {str(e)}'}), 500
+
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
