@@ -546,6 +546,72 @@ def landsat_dates():
     except Exception as e:
         return jsonify({'error': f'Error al obtener fechas Landsat: {str(e)}'}), 500
 
+@app.route('/gee-deforestation-zones-from-geojson', methods=['POST'])
+def zonas_deforestadas_from_geojson():
+    data = request.get_json()
+    date1 = data.get('date1')
+    date2 = data.get('date2')
+    threshold = float(data.get('threshold', 0.2))
+    geojson = data.get('geometry')
+
+    if not date1 or not date2 or not geojson:
+        return jsonify({'error': 'Faltan parámetros date1, date2 o geometry'}), 400
+
+    try:
+        # Convertir GeoJSON a ee.Geometry
+        if geojson.get('type') == 'FeatureCollection':
+            region = ee.FeatureCollection(geojson).geometry()
+        elif geojson.get('type') == 'Feature':
+            region = ee.Feature(geojson).geometry()
+        else:
+            region = ee.Geometry(geojson)
+
+        # Obtener imágenes NDVI por año
+        ndvi1 = buscar_ndvi_anual(date1)
+        ndvi2 = buscar_ndvi_anual(date2)
+
+        diff = ndvi1.subtract(ndvi2)
+        ndvi_base_mask = ndvi1.gt(0.2)
+        mask = diff.gte(threshold).And(ndvi_base_mask).selfMask()
+
+        vectorized = mask.reduceToVectors(
+            geometry=region,
+            geometryType='polygon',
+            scale=90,
+            maxPixels=1e13,
+            bestEffort=True,
+            tileScale=4,
+            geometryInNativeProjection=False,
+            reducer=ee.Reducer.countEvery()
+        )
+
+        features = vectorized.limit(1000)
+        feature_collection = features.getInfo()
+        zone_count = len(feature_collection.get('features', []))
+
+        # Calcular estadísticas
+        area_total = region.area().divide(1e6).getInfo()  # km²
+        area_deforested = zone_count * (90 * 90) / 1e6    # km² (aproximado)
+        pct = (area_deforested / area_total) * 100 if area_total else 0
+        deforestation_detected = zone_count > 0
+
+        feature_collection['deforestationSummary'] = {
+            'zoneCount': zone_count,
+            'threshold': threshold,
+            'dateBase': date1,
+            'dateFinal': date2,
+            'areaTotal_km2': round(area_total, 4),
+            'areaDeforested_km2': round(area_deforested, 4),
+            'percentageAffected': round(pct, 2),
+            'deforestationDetected': deforestation_detected
+        }
+
+        return jsonify(feature_collection)
+
+    except Exception as e:
+        import logging
+        logging.exception("Error en /gee-deforestation-zones-from-geojson")
+        return jsonify({'error': f'Error al generar zonas deforestadas desde polígono: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

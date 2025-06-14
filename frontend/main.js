@@ -11,7 +11,9 @@ L.tileLayer(
 
 map.zoomControl.setPosition('topright');
 
-const drawnItems = new L.FeatureGroup().addTo(map);
+//const drawnItems = new L.FeatureGroup().addTo(map);
+window.drawnItems = new L.FeatureGroup().addTo(map);
+
 const deforestationLayer = L.geoJSON(null, {
   style: { color: "red", weight: 2, fillOpacity: 0.5, opacity: 0.8 },
 }).addTo(map);
@@ -260,10 +262,15 @@ function activarDibujo() {
     map.addControl(map.drawControl);
   }
 
-  map.once(L.Draw.Event.CREATED, function (event) {
-    drawnItems.clearLayers();
-    drawnItems.addLayer(event.layer);
+  map.on(L.Draw.Event.CREATED, function (event) {
+    window.drawnItems.clearLayers();
+    window.drawnItems.addLayer(event.layer);
   });
+
+  //map.once(L.Draw.Event.CREATED, function (event) {
+  //  drawnItems.clearLayers();
+  //  drawnItems.addLayer(event.layer);
+  //});
 }
 
 function descargarGeoJSON() {
@@ -559,11 +566,65 @@ function getColorFromSAVI(savi) {
   return '#800026';
 }
 
+async function detectarZonasEnPoligono() {
+  const date1 = formatDate(document.getElementById("start-date").value);
+  const date2 = formatDate(document.getElementById("end-date").value);
+  const threshold = document.getElementById("threshold").value;
+  const statusDiv = document.getElementById("status-message");
+
+  statusDiv.textContent = "";
+  statusDiv.style.display = "none";
+
+  // Validar que se haya dibujado un polígono
+  if (!window.drawnItems || window.drawnItems.getLayers().length === 0) {
+    alert("Dibuja o selecciona un polígono primero.");
+    return;
+  }
+
+  const geometry = window.drawnItems.getLayers()[0].toGeoJSON().geometry;
+
+  try {
+    const res = await fetch(`${BASE_URL}/gee-deforestation-zones-from-geojson`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date1, date2, threshold, geometry })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      statusDiv.textContent = "❌ " + data.error;
+      statusDiv.style.display = "block";
+      return;
+    }
+
+    if (!data.features || data.features.length === 0) {
+      statusDiv.textContent = "✅ No se encontraron zonas deforestadas dentro del polígono.";
+      statusDiv.style.display = "block";
+    } else {
+      const resumen = data.deforestationSummary;
+      statusDiv.textContent = `✅ Se detectaron ${resumen.zoneCount} zonas deforestadas dentro del polígono (${resumen.percentageAffected}% del área).`;
+      statusDiv.style.display = "block";
+    }
+
+    deforestationLayer.clearLayers();
+    deforestationLayer.addData(data);
+    document.getElementById("layer-label").textContent = "Zonas deforestadas (polígono)";
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.textContent = "❌ Error inesperado al detectar zonas deforestadas en el polígono.";
+    statusDiv.style.display = "block";
+  }
+}
+
+
 // Enlaces a botones
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-comparar-ndvi").addEventListener("click", compararNDVI);
   document.getElementById("btn-detectar").addEventListener("click", detectarDiferencia);
   document.getElementById("btn-zonas").addEventListener("click", detectarZonas);
+  document.getElementById("btn-zonas-poly").addEventListener("click", detectarZonasEnPoligono);
   document.getElementById("btn-stats").addEventListener("click", mostrarEstadisticas);
   document.getElementById("btn-stats-poly").addEventListener("click", mostrarEstadisticasDesdePoligono);
   document.getElementById("btn-limpiar").addEventListener("click", limpiarMapa);
