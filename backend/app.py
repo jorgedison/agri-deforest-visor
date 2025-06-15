@@ -99,7 +99,8 @@ def get_tile_url():
         # Parámetros opcionales desde el frontend
         min_val = float(request.args.get('min', -0.2))
         max_val = float(request.args.get('max', 0.8))
-        palette = request.args.getlist('palette') or ['#762a83', '#af8dc3', '#e7d4e8', '#d9f0d3', '#7fbf7b', '#1b7837']
+        #palette = request.args.getlist('palette') or ['#762a83', '#af8dc3', '#e7d4e8', '#d9f0d3', '#7fbf7b', '#1b7837']
+        palette = request.args.getlist('palette') or ['#8c510a', '#d8b365', '#f6e8c3', '#c7eae5', '#5ab4ac', '#01665e']
 
         vis_params = {
             'min': min_val,
@@ -207,9 +208,9 @@ def diferencia_ndvi():
 
         # Visualización
         vis_params = {
-            'min': -0.1,
-            'max': 0.1,
-            'palette': ['#762a83', '#af8dc3', '#e7d4e8', '#7fbf7b', '#1b7837']
+        'min': -0.2,
+        'max': 0.8,
+        'palette': ['#8c510a', '#d8b365', '#f6e8c3', '#c7eae5', '#5ab4ac', '#01665e']
         }
         visual = diff.visualize(**vis_params)
         map_id = ee.data.getMapId({'image': visual})
@@ -546,72 +547,74 @@ def landsat_dates():
     except Exception as e:
         return jsonify({'error': f'Error al obtener fechas Landsat: {str(e)}'}), 500
 
+
 @app.route('/gee-deforestation-zones-from-geojson', methods=['POST'])
-def zonas_deforestadas_from_geojson():
-    data = request.get_json()
-    date1 = data.get('date1')
-    date2 = data.get('date2')
-    threshold = float(data.get('threshold', 0.2))
-    geojson = data.get('geometry')
-
-    if not date1 or not date2 or not geojson:
-        return jsonify({'error': 'Faltan parámetros date1, date2 o geometry'}), 400
-
+def zonas_deforestadas_geojson():
     try:
-        # Convertir GeoJSON a ee.Geometry
-        if geojson.get('type') == 'FeatureCollection':
-            region = ee.FeatureCollection(geojson).geometry()
-        elif geojson.get('type') == 'Feature':
-            region = ee.Feature(geojson).geometry()
-        else:
-            region = ee.Geometry(geojson)
+        data = request.get_json()
+        date1 = data.get('date1')
+        date2 = data.get('date2')
+        threshold = float(data.get('threshold', 0.2))
+        geometry = data.get('geometry')
 
-        # Obtener imágenes NDVI por año
+        if not date1 or not date2 or not geometry:
+            return jsonify({'error': 'Faltan parámetros date1, date2 o geometry'}), 400
+
+        region = ee.Geometry(geometry)
+
+        # NDVI de cada año
         ndvi1 = buscar_ndvi_anual(date1)
         ndvi2 = buscar_ndvi_anual(date2)
 
-        diff = ndvi1.subtract(ndvi2)
-        ndvi_base_mask = ndvi1.gt(0.2)
-        mask = diff.gte(threshold).And(ndvi_base_mask).selfMask()
+        # Diferencia
+        diff = ndvi1.subtract(ndvi2).rename('NDVI_DIFF')
 
-        vectorized = mask.reduceToVectors(
+        # Aplicar filtro: solo zonas que eran vegetación (ndvi1 > 0.2) y bajaron más del threshold
+        ndvi_base_mask = ndvi1.gt(0.2)
+        zonas_deforestadas = diff.gte(threshold).And(ndvi_base_mask).selfMask()
+
+        # Vectorizar zonas afectadas
+        zonas_vector = zonas_deforestadas.reduceToVectors(
             geometry=region,
             geometryType='polygon',
+            reducer=ee.Reducer.countEvery(),
             scale=90,
             maxPixels=1e13,
-            bestEffort=True,
             tileScale=4,
-            geometryInNativeProjection=False,
-            reducer=ee.Reducer.countEvery()
+            bestEffort=True,
+            geometryInNativeProjection=False
         )
 
-        features = vectorized.limit(1000)
-        feature_collection = features.getInfo()
-        zone_count = len(feature_collection.get('features', []))
+        # Calcular área afectada y total
+        area_afectada_km2 = zonas_vector.geometry().area(1).divide(1e6).getInfo()
+        area_total_km2 = region.area(1).divide(1e6).getInfo()
+        porcentaje_afectado = (area_afectada_km2 / area_total_km2) * 100 if area_total_km2 > 0 else 0
 
-        # Calcular estadísticas
-        area_total = region.area().divide(1e6).getInfo()  # km²
-        area_deforested = zone_count * (90 * 90) / 1e6    # km² (aproximado)
-        pct = (area_deforested / area_total) * 100 if area_total else 0
-        deforestation_detected = zone_count > 0
+        # Añadir etiqueta a cada feature
+        zonas_vector = zonas_vector.map(lambda f: f.set('label', 1))
 
-        feature_collection['deforestationSummary'] = {
-            'zoneCount': zone_count,
-            'threshold': threshold,
-            'dateBase': date1,
-            'dateFinal': date2,
-            'areaTotal_km2': round(area_total, 4),
-            'areaDeforested_km2': round(area_deforested, 4),
-            'percentageAffected': round(pct, 2),
-            'deforestationDetected': deforestation_detected
-        }
+        # Obtener resultado GeoJSON
+        geojson = zonas_vector.getInfo()
 
-        return jsonify(feature_collection)
+        return jsonify({
+            'features': geojson['features'],
+            'deforestationSummary': {
+                'zoneCount': len(geojson['features']),
+                'areaAffected_km2': round(area_afectada_km2, 4),
+                'totalArea_km2': round(area_total_km2, 4),
+                'percentageAffected': round(porcentaje_afectado, 2),
+                'threshold': threshold,
+                'dateBase': date1,
+                'dateFinal': date2,
+                'deforestationDetected': len(geojson['features']) > 0
+            }
+        })
 
     except Exception as e:
-        import logging
-        logging.exception("Error en /gee-deforestation-zones-from-geojson")
-        return jsonify({'error': f'Error al generar zonas deforestadas desde polígono: {str(e)}'}), 500
+        print("❌ Error procesando zonas deforestadas por polígono:", str(e))
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)

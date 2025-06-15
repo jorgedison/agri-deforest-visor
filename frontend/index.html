@@ -13,6 +13,28 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
+	<!-- Botón para abrir la leyenda -->
+<button id="btn-leyenda" class="legend-button">Ver leyenda</button>
+
+<!-- Modal de leyenda NDVI -->
+<div id="modal-leyenda" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Leyenda NDVI</h2>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background:#8c510a;"></span> NDVI &lt; 0.1 - Suelo expuesto</li>
+      <li><span class="color-box" style="background:#d8b365;"></span> 0.1 - 0.2 - Vegetación muy degradada</li>
+      <li><span class="color-box" style="background:#f6e8c3;"></span> 0.2 - 0.4 - Vegetación escasa o mixta</li>
+      <li><span class="color-box" style="background:#c7eae5;"></span> 0.4 - 0.6 - Vegetación moderada</li>
+      <li><span class="color-box" style="background:#5ab4ac;"></span> 0.6 - 0.8 - Vegetación abundante</li>
+      <li><span class="color-box" style="background:#01665e;"></span> &gt; 0.8 - Vegetación densa</li>
+    </ul>
+  </div>
+</div>
+
+
+
   <div id="controls">
     <h2>Monitoreo de Vegetación</h2>
 

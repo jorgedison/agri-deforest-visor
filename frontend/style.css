@@ -102,3 +102,65 @@ body {
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
 }
 
+.legend-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #006d2c;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1002;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: #fff;
+  margin: 10% auto;
+  padding: 20px;
+  width: 320px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.close {
+  float: right;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.leyenda-lista {
+  list-style: none;
+  padding-left: 0;
+}
+
+.color-box {
+  display: inline-block;
+  width: 20px; height: 20px;
+  margin-right: 10px;
+  vertical-align: middle;
+  border: 1px solid #ccc;
+}
+
+style: feature => {
+  const ndvi = feature.properties.ndvi ?? 0;
+  const color = getColorFromNDVI(ndvi);
+  return {
+    color: color,
+    fillColor: color,
+    weight: 2,
+    fillOpacity: 0.6,
+    opacity: 0.8
+  };
+}
+

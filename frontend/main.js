@@ -14,8 +14,25 @@ map.zoomControl.setPosition('topright');
 //const drawnItems = new L.FeatureGroup().addTo(map);
 window.drawnItems = new L.FeatureGroup().addTo(map);
 
+//const deforestationLayer = L.geoJSON(null, {
+//  style: { color: "red", weight: 2, fillOpacity: 0.5, opacity: 0.8 },
+//}).addTo(map);
+
 const deforestationLayer = L.geoJSON(null, {
-  style: { color: "red", weight: 2, fillOpacity: 0.5, opacity: 0.8 },
+  style: feature => {
+    const label = feature.properties.label;
+
+    // Puedes usar otra propiedad si prefieres (como NDVI promedio)
+    const color = label === 1 ? "#8c510a" : "#5ab4ac"; // ejemplo básico
+
+    return {
+      color: color,
+      fillColor: color,
+      weight: 2,
+      fillOpacity: 0.6,
+      opacity: 0.8
+    };
+  }
 }).addTo(map);
 
 const screenshoter = L.simpleMapScreenshoter({
@@ -51,8 +68,12 @@ async function compararNDVI() {
   const min = -0.2;
   const max = 0.8;
   const palette = [
-    '#762a83', '#af8dc3', '#e7d4e8',
-    '#d9f0d3', '#7fbf7b', '#1b7837'
+  '#8c510a',
+  '#d8b365',
+  '#f6e8c3',
+  '#c7eae5',
+  '#5ab4ac',
+  '#01665e'
   ];
 
   const params1 = new URLSearchParams({ date: date1, min: min, max: max });
@@ -234,13 +255,21 @@ function interpretarNDVI(mean) {
 }
 
 function getColorFromNDVI(ndvi) {
-  if (ndvi >= 0.8) return '#006d2c';
-  if (ndvi >= 0.6) return '#31a354';
-  if (ndvi >= 0.3) return '#addd8e';
-  if (ndvi >= 0.1) return '#fcbba1';
-  return '#67000d';
+  if (ndvi < 0.1) return '#8c510a';
+  if (ndvi < 0.2) return '#d8b365';
+  if (ndvi < 0.4) return '#f6e8c3';
+  if (ndvi < 0.6) return '#c7eae5';
+  if (ndvi < 0.8) return '#5ab4ac';
+  return '#01665e';
 }
 
+//function getColorFromNDVI(ndvi) {
+//  if (ndvi >= 0.8) return '#006d2c';
+//  if (ndvi >= 0.6) return '#31a354';
+//  if (ndvi >= 0.3) return '#addd8e';
+//  if (ndvi >= 0.1) return '#fcbba1';
+//  return '#67000d';
+//}
 
 function activarDibujo() {
   if (!map.drawControl) {
@@ -569,19 +598,35 @@ function getColorFromSAVI(savi) {
 async function detectarZonasEnPoligono() {
   const date1 = formatDate(document.getElementById("start-date").value);
   const date2 = formatDate(document.getElementById("end-date").value);
-  const threshold = document.getElementById("threshold").value;
+  const threshold = parseFloat(document.getElementById("threshold").value) || 0.2;
   const statusDiv = document.getElementById("status-message");
 
   statusDiv.textContent = "";
   statusDiv.style.display = "none";
 
-  // Validar que se haya dibujado un polígono
-  if (!window.drawnItems || window.drawnItems.getLayers().length === 0) {
-    alert("Dibuja o selecciona un polígono primero.");
+  // Validación de fechas
+  if (!date1 || !date2) {
+    statusDiv.textContent = "❌ Faltan parámetros: date1 y/o date2.";
+    statusDiv.style.display = "block";
     return;
   }
 
-  const geometry = window.drawnItems.getLayers()[0].toGeoJSON().geometry;
+  // Validación de polígono
+  if (!window.drawnItems || window.drawnItems.getLayers().length === 0) {
+    statusDiv.textContent = "❌ Debes dibujar o cargar un polígono.";
+    statusDiv.style.display = "block";
+    return;
+  }
+
+  // Extraer geometría del primer polígono
+  const geojson = window.drawnItems.toGeoJSON();
+  const geometry = geojson.features[0]?.geometry;
+
+  if (!geometry) {
+    statusDiv.textContent = "❌ Error: no se pudo leer la geometría del polígono.";
+    statusDiv.style.display = "block";
+    return;
+  }
 
   try {
     const res = await fetch(`${BASE_URL}/gee-deforestation-zones-from-geojson`, {
@@ -592,31 +637,43 @@ async function detectarZonasEnPoligono() {
 
     const data = await res.json();
 
-    if (data.error) {
-      statusDiv.textContent = "❌ " + data.error;
+    if (res.status === 400 || data.error) {
+      statusDiv.textContent = "❌ " + (data.error || "Error al procesar la solicitud.");
       statusDiv.style.display = "block";
       return;
     }
 
+    // Mostrar resultado
     if (!data.features || data.features.length === 0) {
       statusDiv.textContent = "✅ No se encontraron zonas deforestadas dentro del polígono.";
-      statusDiv.style.display = "block";
     } else {
       const resumen = data.deforestationSummary;
       statusDiv.textContent = `✅ Se detectaron ${resumen.zoneCount} zonas deforestadas dentro del polígono (${resumen.percentageAffected}% del área).`;
-      statusDiv.style.display = "block";
     }
 
+    statusDiv.style.display = "block";
     deforestationLayer.clearLayers();
     deforestationLayer.addData(data);
     document.getElementById("layer-label").textContent = "Zonas deforestadas (polígono)";
 
   } catch (err) {
-    console.error(err);
-    statusDiv.textContent = "❌ Error inesperado al detectar zonas deforestadas en el polígono.";
+    console.error("Error al detectar zonas en polígono:", err);
+    statusDiv.textContent = "❌ Error inesperado al procesar zonas deforestadas.";
     statusDiv.style.display = "block";
   }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("modal-leyenda");
+  const btn = document.getElementById("btn-leyenda");
+  const span = document.querySelector(".modal .close");
+
+  btn.onclick = () => modal.style.display = "block";
+  span.onclick = () => modal.style.display = "none";
+  window.onclick = (e) => {
+    if (e.target === modal) modal.style.display = "none";
+  };
+});
 
 
 // Enlaces a botones
