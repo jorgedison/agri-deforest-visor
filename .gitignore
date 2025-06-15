@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+*.env
+
+# Node/Vue
+node_modules/
+dist/
+frontend/node_modules/
+frontend/dist/
+
+# Docker
+*.log
+*.pid
+docker-compose.override.yml
+
+# Credenciales y archivos sensibles
+earthengine-credentials.json
+
+# IDEs y editores
+.vscode/
+.idea/
+
+# Otros
+.DS_Store
+
+#backend/Dockerfile
+#docker-compose.yml
+#frontend/Dockerfile

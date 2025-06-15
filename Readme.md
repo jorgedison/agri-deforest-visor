@@ -1,67 +1,61 @@
-# Visor de Deforestación con Imágenes Satelitales
+# 🌱 Visor de Deforestación con NDVI (LANDSAT + GEE)
 
-Este proyecto permite visualizar y capturar evidencia de deforestación a partir de imágenes satelitales Sentinel-2 usando ArcGIS JavaScript API.
+Herramienta interactiva para visualizar y analizar la deforestación en áreas geográficas específicas mediante el índice de vegetación NDVI (Normalized Difference Vegetation Index). Utiliza datos de satélite proporcionados por **Google Earth Engine** (LANDSAT/LC08/C02/T1_L2) y está compuesto por:
 
-## Funcionalidades
+- 🛰️ **Backend en Python + Flask** que expone una API para obtener imágenes NDVI y zonas de deforestación.
+- 🗺️ **Frontend en HTML + Leaflet** que permite visualizar los datos de manera interactiva en un mapa.
 
-- Visualización de mapa satelital
-- Dibujo de parcelas (Sketch)
-- Comparación de imágenes satelitales por rango de fechas (Swipe)
-- Captura de pantalla (`takeScreenshot()`)
-- Exportación de historial en formato `.json`
-- Carga de historial previo
-- Control de opacidad de capas
+---
 
-## Requisitos
+## 📦 Estructura del Proyecto
 
-- Node.js instalado
-- Paquete `http-server` instalado globalmente
+```
+.
+├── backend/           # API con conexión a Google Earth Engine
+├── frontend/          # Interfaz web con Leaflet
+└── README.md          # Este archivo
+```
+
+---
+
+## 🚀 Requisitos
+
+- Python 3.8+ (para el backend)
+- Node.js (opcional para `http-server`)
+- Cuenta activa en Google Earth Engine
+- Conexión a internet para cargar tiles y APIs
+
+---
+
+## ▶️ Ejecución local
+
+### Backend
 
 ```bash
-npm install -g http-server
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+earthengine authenticate
+python app.py
 ```
 
-## Uso en entorno local
-
-1. Clona este repositorio:
+### Frontend
 
 ```bash
-git https://github.com/jorgedison/agri-deforest-visor.git
-cd agri-deforest-visor
+cd frontend
+http-server -p 8081
 ```
 
-2. Inicia el servidor local sin caché:
+Abre tu navegador en `http://localhost:8081`.
 
-```bash
-http-server -c-1
-```
+---
 
-3. Abre en tu navegador:
+## 🧠 Funcionalidades
 
-```
-http://localhost:8080
-```
+- Visualización del NDVI de una fecha específica
+- Comparación temporal de NDVI
+- Detección de zonas deforestadas (con visualización en GeoJSON)
+- Herramientas interactivas: dibujo, limpieza y descarga del área
 
-## Consideraciones
-
-- El visor usa ArcGIS JS API 4.29, se requiere una [API Key de ArcGIS](https://developers.arcgis.com/) válida para cargar imágenes de Sentinel-2.
-- Para evitar errores por archivos en caché durante el desarrollo, se recomienda:
-  - Usar `http-server -c-1`
-  - O cambiar la versión del script:  
-    `<script type="module" src="main.js?v=1.0.0"></script>`
-
-## Estructura del proyecto
-
-```
-visor-deforestacion/
-├── index.html           → Interfaz del visor
-├── style.css            → Estilos del visor
-├── main.js              → Lógica del visor y controles
-├── README.md            → Este archivo
-```
-
-## Capturas y Evidencias
-
-Cada captura genera:
-- Imagen PNG (`screenshot-YYYY-MM-DDTHH-MM-SS.png`)
-- Archivo `.json` con coordenadas, fechas y metadatos
+Este proyecto analiza NDVI usando imágenes LANDSAT para monitorear deforestación.

@@ -2,40 +2,69 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Visor Satelital - Deforestación</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <title>Visor de Deforestación - Landsat NDVI</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
   <link rel="stylesheet" href="style.css" />
-  <script src="https://js.arcgis.com/4.29/"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
 </head>
 <body>
   <div id="controls">
-    <fieldset>
-      <legend>🗓️ Fechas de comparación</legend>
-      <label for="start-date">Desde:</label>
-      <input type="date" id="start-date" /><br>
-      <label for="end-date">Hasta:</label>
-      <input type="date" id="end-date" /><br>
-      <button id="load-images">🛰️ Cargar imágenes</button>
-      <button id="clear-swipe">🧹 Limpiar comparación</button>
-    </fieldset>
+    <h2>Monitoreo de Vegetación</h2>
 
-    <fieldset>
-      <legend>🎯 Parcela y captura</legend>
-      <button id="capture">📸 Capturar imagen</button>
-      <label for="opacity">Opacidad:</label>
-      <input type="range" id="opacity" min="0" max="1" step="0.1" value="0.7" />
-    </fieldset>
+    <label for="start-date">Fecha inicial:</label>
+    <input type="date" id="start-date" value="2020-01-01" />
 
-    <fieldset>
-      <legend>📂 Historial</legend>
-      <label for="load-history">Cargar historial (.json):</label>
-      <input type="file" id="load-history" accept=".json" />
-    </fieldset>
+    <label for="end-date">Fecha final:</label>
+    <input type="date" id="end-date" value="2023-01-01" />
+
+    <label for="ndvi-date">Fecha para estadísticas:</label>
+    <input type="date" id="ndvi-date" value="2023-01-01" />
+
+    <label for="threshold">Umbral NDVI:</label>
+    <input type="number" id="threshold" value="0.2" step="0.01" min="0" max="1" />
+
+    <div class="buttons">
+      <button id="btn-comparar-ndvi">Comparar NDVI</button>
+      <button id="btn-detectar">Diferencia NDVI</button>
+      <button id="btn-zonas">Zonas deforestadas</button>
+      <button id="btn-stats">Estadísticas NDVI</button>
+      <button id="btn-limpiar">Limpiar mapa</button>
+      <button id="btn-dibujar">Dibujar área</button>
+      <button id="btn-descargar">Descargar área (.json)</button>
+      <button id="btn-capturar">Capturar visor (PNG)</button>
+      <input type="file" id="input-geojson" accept=".json" />
+      <button id="btn-stats-poly">Estadísticas desde polígono</button>
+    </div>
+
+    <div id="legend" style="display:none">
+      <p><strong>Leyenda NDVI:</strong></p>
+      <div class="palette">
+        <span style="background:#67000d"></span>
+        <span style="background:#fcbba1"></span>
+        <span style="background:#ffffff"></span>
+        <span style="background:#ccece6"></span>
+        <span style="background:#006d2c"></span>
+      </div>
+    </div>
+
+    <p id="layer-label">Capa activa: -</p>
+
+    <div id="stats-panel" style="display:none">
+      <h3>Estadísticas NDVI</h3>
+      <p><strong>Año:</strong> <span id="stats-year">-</span></p>
+      <p><strong>Promedio:</strong> <span id="stats-mean">-</span></p>
+      <p><strong>Mínimo:</strong> <span id="stats-min">-</span></p>
+      <p><strong>Máximo:</strong> <span id="stats-max">-</span></p>
+      <p><strong>Desv. Est.:</strong> <span id="stats-std">-</span></p>
+      <p id="stats-msg" style="font-weight: bold; margin-top: 10px;"></p>
+    </div>
   </div>
 
-  <div id="viewDiv"></div>
-  <script type="module" src="main.js"></script>
+  <div id="map"></div>
+  <script src="main.js"></script>
 </body>
 </html>
-

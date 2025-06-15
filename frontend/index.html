@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visor de Deforestación - Landsat NDVI</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet-simple-map-screenshoter"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+	<!-- Botón para abrir la leyenda -->
+<button id="btn-leyenda" class="legend-button">Ver leyenda</button>
+
+<!-- Modal de leyenda NDVI -->
+<div id="modal-leyenda" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Leyenda NDVI</h2>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background:#8c510a;"></span> NDVI &lt; 0.1 - Suelo expuesto</li>
+      <li><span class="color-box" style="background:#d8b365;"></span> 0.1 - 0.2 - Vegetación muy degradada</li>
+      <li><span class="color-box" style="background:#f6e8c3;"></span> 0.2 - 0.4 - Vegetación escasa o mixta</li>
+      <li><span class="color-box" style="background:#c7eae5;"></span> 0.4 - 0.6 - Vegetación moderada</li>
+      <li><span class="color-box" style="background:#5ab4ac;"></span> 0.6 - 0.8 - Vegetación abundante</li>
+      <li><span class="color-box" style="background:#01665e;"></span> &gt; 0.8 - Vegetación densa</li>
+    </ul>
+  </div>
+</div>
+
+
+
+  <div id="controls">
+    <h2>Monitoreo de Vegetación</h2>
+
+    <label for="start-date">Fecha inicial:</label>
+    <input type="date" id="start-date" value="2020-01-01" />
+
+    <label for="end-date">Fecha final:</label>
+    <input type="date" id="end-date" value="2023-01-01" />
+
+    <label for="ndvi-date">Fecha para estadísticas:</label>
+    <input type="date" id="ndvi-date" value="2023-01-01" />
+
+    <label for="threshold">Umbral NDVI:</label>
+    <input type="number" id="threshold" value="0.2" step="0.01" min="0" max="1" />
+    <!-- ✅ Nuevo: para mostrar el NDVI real usado -->
+    <div id="ndvi-info" style="margin-top: 10px; font-size: 0.9em; color: #555;"></div>
+    <!-- Mensajes de estado -->
+    <div id="status-message" style="display:none; margin-top: 10px; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;"></div>
+
+    <div class="buttons">
+      <button id="btn-comparar-ndvi">Comparar NDVI</button>
+      <button id="btn-detectar">Diferencia NDVI</button>
+      <button id="btn-zonas">Zonas deforestadas</button>
+      <button id="btn-zonas-poly">Zonas deforestadas desde polígono</button>
+      <button id="btn-stats">Estadísticas NDVI</button>
+      <button id="btn-stats-savi">Estadísticas SAVI</button>
+      <button id="btn-histograma-ndvi">Histograma de cambios NDVI</button>
+      <button id="btn-limpiar">Limpiar mapa</button>
+      <button id="btn-dibujar">Dibujar área</button>
+      <button id="btn-descargar">Descargar área (.json)</button>
+      <button id="btn-capturar">Capturar visor (PNG)</button>
+      <input type="file" id="input-geojson" accept=".json" />
+      <button id="btn-stats-poly">Estadísticas NDVI desde polígono</button>
+      <button id="btn-stats-savi-poly">Estadísticas SAVI desde Polígono</button>
+      <button id="btn-fechas-landsat">Ver fechas Landsat</button>
+
+    </div>
+
+    <div id="legend" style="display:none">
+      <p><strong>Leyenda:</strong></p>
+      <div class="palette">
+        <span style="background:#67000d"></span>
+        <span style="background:#fcbba1"></span>
+        <span style="background:#ffffff"></span>
+        <span style="background:#ccece6"></span>
+        <span style="background:#006d2c"></span>
+      </div>
+    </div>
+
+    <p id="layer-label">Capa activa: -</p>
+    
+    	<div id="stats-panel" style="display:none">
+  	<h3>Estadísticas</h3>
+  	<canvas id="ndviChart" width="400" height="200"></canvas>
+  	<p><strong>Año:</strong> <span id="stats-year">-</span></p>
+  	<p><strong>Promedio:</strong> <span id="stats-mean">-</span></p>
+  	<p><strong>Mínimo:</strong> <span id="stats-min">-</span></p>
+  	<p><strong>Máximo:</strong> <span id="stats-max">-</span></p>
+  	<p><strong>Desv. Est.:</strong> <span id="stats-std">-</span></p>
+  	<p id="stats-msg" style="font-weight: bold; margin-top: 10px;"></p>
+	</div>
+
+  </div>
+
+  <div id="map"></div>
+  <script src="main.js"></script>
+</body>
+</html>

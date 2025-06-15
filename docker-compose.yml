@@ -1,0 +1,29 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: backend
+    volumes:
+      - ./earthengine-credentials.json:/root/.config/earthengine/credentials:ro
+    ports:
+      - "5000:5000"
+    networks:
+      - app-net
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - "1025:8080"
+    networks:
+      - app-net
+    depends_on:
+      - backend
+
+networks:
+  app-net:
+    driver: bridge
+
