@@ -51,6 +51,27 @@ def buscar_ndvi_anual(fecha):
     ndvi_anual = ndvi_anual.clamp(-0.1, 0.9)
     return ndvi_anual
 
+def buscar_ndvi_periodo(start_date, end_date):
+    coleccion = (
+        ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+        .filterDate(start_date, end_date)
+        .filterMetadata('CLOUD_COVER', 'less_than', 50)
+    )
+
+    def calcular_ndvi(img):
+        pixel_qa = img.select('QA_PIXEL')
+        clear_mask = pixel_qa.bitwiseAnd(1 << 3).eq(0).And(
+                      pixel_qa.bitwiseAnd(1 << 4).eq(0))
+
+        nir = reflectance(img, 'SR_B5')
+        red = reflectance(img, 'SR_B4')
+        ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI')
+        return ndvi.clamp(-1, 1).updateMask(clear_mask)
+
+    coleccion_ndvi = coleccion.map(calcular_ndvi)
+    ndvi_promedio_periodo = coleccion_ndvi.mean().rename('NDVI')
+    return ndvi_promedio_periodo.clamp(-0.1, 0.9)
+
 # Construir un mosaico SAVI promedio para un año
 def buscar_savi_anual(fecha, L=0.5):
     anio = fecha[:4]
