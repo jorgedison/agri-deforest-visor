@@ -97,20 +97,23 @@ async function compararNDVI() {
 }
 
 async function detectarDiferencia() {
-  const date1 = formatDate(document.getElementById("start-date").value);
-  const date2 = formatDate(document.getElementById("end-date").value);
+  const start1 = document.getElementById("start-date").value;  // período inicial
+  const end1 = document.getElementById("end-date").value;      // fin del período inicial
+  const start2 = document.getElementById("ndvi-date").value;   // inicio del segundo período
+  const end2 = document.getElementById("ndvi-date").value;     // podrías usar otro input si deseas
 
-  // Obtener el bounding box actual del mapa
   const bounds = map.getBounds();
   const minx = bounds.getWest();
   const miny = bounds.getSouth();
   const maxx = bounds.getEast();
   const maxy = bounds.getNorth();
-
-  // Puedes ajustar el umbral si deseas
   const threshold = -0.02;
 
-  const url = `${BASE_URL}/gee-ndvi-diff?date1=${date1}&date2=${date2}&minx=${minx}&miny=${miny}&maxx=${maxx}&maxy=${maxy}&threshold=${threshold}`;
+  const url = `${BASE_URL}/gee-ndvi-diff` +
+    `?date1_start=${start1}&date1_end=${end1}` +
+    `&date2_start=${start2}&date2_end=${end2}` +
+    `&minx=${minx}&miny=${miny}&maxx=${maxx}&maxy=${maxy}` +
+    `&threshold=${threshold}`;
 
   try {
     const res = await fetch(url);
@@ -122,19 +125,18 @@ async function detectarDiferencia() {
       document.getElementById("layer-label").textContent = data.name;
       document.getElementById("legend").style.display = "block";
 
-      // Mostrar alerta si se detecta deforestación
       if (data.deforestationDetected) {
-        alert(`⚠️ Se detectó posible deforestación entre ${data.yearBase} y ${data.yearFinal}.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
+        alert(`⚠️ Se detectó posible deforestación entre ${data.period1.start} y ${data.period2.start}.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
       } else {
         alert(`✅ No se detectó deforestación significativa.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
       }
-
     } else {
-      console.error('Respuesta inesperada del servidor:', data);
+      console.error("Respuesta inesperada:", data);
       alert("Error al cargar el mapa de diferencias NDVI.");
     }
-  } catch (error) {
-    console.error("Error en detectarDiferencia:", error);
+
+  } catch (err) {
+    console.error("Error al detectar diferencia NDVI:", err);
     alert("Ocurrió un error al procesar la diferencia NDVI.");
   }
 }
