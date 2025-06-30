@@ -201,12 +201,18 @@ def ndvi_stats():
         logging.exception("Error en estadísticas NDVI")
         return jsonify({'error': f'Error al calcular estadísticas NDVI: {str(e)}'}), 500
 
-
 @app.route('/gee-ndvi-diff')
 def diferencia_ndvi():
-    date1 = request.args.get('date1')
-    date2 = request.args.get('date2')
-    threshold = float(request.args.get('threshold', -0.02))  # Umbral de deforestación
+    # Nuevos parámetros del frontend
+    start1 = request.args.get('date1_start')
+    end1 = request.args.get('date1_end')
+    start2 = request.args.get('date2_start')
+    end2 = request.args.get('date2_end')
+    threshold = float(request.args.get('threshold', -0.02))
+
+    # Validaciones mínimas
+    if not all([start1, end1, start2, end2]):
+        return jsonify({'error': 'Faltan fechas de inicio o fin para ambos periodos'}), 400
 
     try:
         minx = float(request.args.get('minx'))
@@ -216,27 +222,22 @@ def diferencia_ndvi():
     except (TypeError, ValueError):
         return jsonify({'error': 'Debe proporcionar minx, miny, maxx y maxy'}), 400
 
-    if not date1 or not date2:
-        return jsonify({'error': 'Faltan parámetros date1 o date2'}), 400
-
     try:
         region = ee.Geometry.BBox(minx, miny, maxx, maxy)
 
-        # Obtener NDVI de cada año
-        ndvi1 = buscar_ndvi_anual(date1)
-        ndvi2 = buscar_ndvi_anual(date2)
+        # Usar tu nueva función que NO promedia por año
+        ndvi1 = buscar_ndvi_periodo(start1, end1)
+        ndvi2 = buscar_ndvi_periodo(start2, end2)
         diff = ndvi2.subtract(ndvi1).rename('NDVI_DIFF').clip(region)
 
-        # Visualización
         vis_params = {
-        'min': -0.2,
-        'max': 0.8,
-        'palette': ['#8c510a', '#d8b365', '#f6e8c3', '#c7eae5', '#5ab4ac', '#01665e']
+            'min': -0.2,
+            'max': 0.8,
+            'palette': ['#8c510a', '#d8b365', '#f6e8c3', '#c7eae5', '#5ab4ac', '#01665e']
         }
         visual = diff.visualize(**vis_params)
         map_id = ee.data.getMapId({'image': visual})
 
-        # Estadísticas del cambio NDVI en la región
         stats = diff.reduceRegion(
             reducer=ee.Reducer.mean()
                 .combine(ee.Reducer.minMax(), sharedInputs=True)
@@ -251,7 +252,7 @@ def diferencia_ndvi():
         deforestation_detected = mean_diff < threshold
 
         return jsonify({
-            'name': f'Cambios NDVI ({date1[:4]} → {date2[:4]})',
+            'name': f'Cambios NDVI ({start1} → {start2})',
             'tileUrl': map_id['tile_fetcher'].url_format,
             'paletteUsed': vis_params['palette'],
             'processingDate': datetime.datetime.utcnow().isoformat() + 'Z',
@@ -265,12 +266,13 @@ def diferencia_ndvi():
             },
             'deforestationDetected': deforestation_detected,
             'threshold': threshold,
-            'yearBase': int(date1[:4]),
-            'yearFinal': int(date2[:4])
+            'period1': {'start': start1, 'end': end1},
+            'period2': {'start': start2, 'end': end2}
         })
 
     except Exception as e:
         return jsonify({'error': f'Error al calcular diferencia NDVI: {str(e)}'}), 500
+
 
 @app.route('/gee-deforestation-zones')
 def zonas_deforestadas():
