@@ -97,20 +97,28 @@ async function compararNDVI() {
 }
 
 async function detectarDiferencia() {
-  const date1 = formatDate(document.getElementById("start-date").value);
-  const date2 = formatDate(document.getElementById("end-date").value);
+  const start = document.getElementById("start-date").value;
+  const end = document.getElementById("end-date").value;
+  const threshold = parseFloat(document.getElementById("threshold").value) || -0.02;
 
-  // Obtener el bounding box actual del mapa
-  const bounds = map.getBounds();
+  if (!start || !end || start >= end) {
+    alert("⚠️ Verifica que ambas fechas estén completas y en orden.");
+    return;
+  }
+
+  const bounds = typeof region !== 'undefined' && region.getBounds
+    ? region.getBounds()
+    : map.getBounds();
+
   const minx = bounds.getWest();
   const miny = bounds.getSouth();
   const maxx = bounds.getEast();
   const maxy = bounds.getNorth();
 
-  // Puedes ajustar el umbral si deseas
-  const threshold = -0.02;
-
-  const url = `${BASE_URL}/gee-ndvi-diff?date1=${date1}&date2=${date2}&minx=${minx}&miny=${miny}&maxx=${maxx}&maxy=${maxy}&threshold=${threshold}`;
+  const url = `${BASE_URL}/gee-ndvi-diff` +
+    `?date1=${start}&date2=${end}` +
+    `&minx=${minx}&miny=${miny}&maxx=${maxx}&maxy=${maxy}` +
+    `&threshold=${threshold}`;
 
   try {
     const res = await fetch(url);
@@ -119,25 +127,24 @@ async function detectarDiferencia() {
     if (res.ok && data.tileUrl) {
       limpiarMapa();
       L.tileLayer(data.tileUrl).addTo(map);
-      document.getElementById("layer-label").textContent = data.name;
+      document.getElementById("layer-label").textContent = `Diferencia NDVI: ${start} a ${end}`;
       document.getElementById("legend").style.display = "block";
 
-      // Mostrar alerta si se detecta deforestación
-      if (data.deforestationDetected) {
-        alert(`⚠️ Se detectó posible deforestación entre ${data.yearBase} y ${data.yearFinal}.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
-      } else {
-        alert(`✅ No se detectó deforestación significativa.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
-      }
+      alert(data.mensaje);
 
+    } else if (res.status === 400) {
+      alert(`⚠️ Error 400: ${data.error}\n${data.detalles || ""}`);
     } else {
-      console.error('Respuesta inesperada del servidor:', data);
-      alert("Error al cargar el mapa de diferencias NDVI.");
+      console.error("Respuesta inesperada:", data);
+      alert("❌ Error al procesar el análisis NDVI.");
     }
-  } catch (error) {
-    console.error("Error en detectarDiferencia:", error);
-    alert("Ocurrió un error al procesar la diferencia NDVI.");
+
+  } catch (err) {
+    console.error("❌ Error en la solicitud NDVI:", err);
+    alert("❌ Ocurrió un error inesperado al contactar el backend.");
   }
 }
+
 
 
 function calcularAreaEnKm2(bounds) {
