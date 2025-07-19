@@ -97,26 +97,21 @@ async function compararNDVI() {
 }
 
 async function detectarDiferencia() {
-  const start = document.getElementById("start-date").value;
-  const end = document.getElementById("end-date").value;
-  const threshold = parseFloat(document.getElementById("threshold").value) || -0.02;
+  const start1 = document.getElementById("start-date").value;  // período inicial
+  const end1 = document.getElementById("end-date").value;      // fin del período inicial
+  const start2 = document.getElementById("ndvi-date").value;   // inicio del segundo período
+  const end2 = document.getElementById("ndvi-date").value;     // podrías usar otro input si deseas
 
-  if (!start || !end || start >= end) {
-    alert("⚠️ Verifica que ambas fechas estén completas y en orden.");
-    return;
-  }
-
-  const bounds = typeof region !== 'undefined' && region.getBounds
-    ? region.getBounds()
-    : map.getBounds();
-
+  const bounds = map.getBounds();
   const minx = bounds.getWest();
   const miny = bounds.getSouth();
   const maxx = bounds.getEast();
   const maxy = bounds.getNorth();
+  const threshold = -0.02;
 
   const url = `${BASE_URL}/gee-ndvi-diff` +
-    `?date1=${start}&date2=${end}` +
+    `?date1_start=${start1}&date1_end=${end1}` +
+    `&date2_start=${start2}&date2_end=${end2}` +
     `&minx=${minx}&miny=${miny}&maxx=${maxx}&maxy=${maxy}` +
     `&threshold=${threshold}`;
 
@@ -127,24 +122,24 @@ async function detectarDiferencia() {
     if (res.ok && data.tileUrl) {
       limpiarMapa();
       L.tileLayer(data.tileUrl).addTo(map);
-      document.getElementById("layer-label").textContent = `Diferencia NDVI: ${start} a ${end}`;
+      document.getElementById("layer-label").textContent = data.name;
       document.getElementById("legend").style.display = "block";
 
-      alert(data.mensaje);
-
-    } else if (res.status === 400) {
-      alert(`⚠️ Error 400: ${data.error}\n${data.detalles || ""}`);
+      if (data.deforestationDetected) {
+        alert(`⚠️ Se detectó posible deforestación entre ${data.period1.start} y ${data.period2.start}.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
+      } else {
+        alert(`✅ No se detectó deforestación significativa.\nCambio medio: ${data.ndviChangeStats.mean.toFixed(4)}`);
+      }
     } else {
       console.error("Respuesta inesperada:", data);
-      alert("❌ Error al procesar el análisis NDVI.");
+      alert("Error al cargar el mapa de diferencias NDVI.");
     }
 
   } catch (err) {
-    console.error("❌ Error en la solicitud NDVI:", err);
-    alert("❌ Ocurrió un error inesperado al contactar el backend.");
+    console.error("Error al detectar diferencia NDVI:", err);
+    alert("Ocurrió un error al procesar la diferencia NDVI.");
   }
 }
-
 
 
 function calcularAreaEnKm2(bounds) {

@@ -51,17 +51,12 @@ def buscar_ndvi_anual(fecha):
     ndvi_anual = ndvi_anual.clamp(-0.1, 0.9)
     return ndvi_anual
 
-def buscar_ndvi_periodo(start_date, end_date, region):
+def buscar_ndvi_periodo(start_date, end_date):
     coleccion = (
         ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
         .filterDate(start_date, end_date)
-        .filterBounds(region)
         .filterMetadata('CLOUD_COVER', 'less_than', 50)
     )
-
-    # Validar que haya imágenes disponibles
-    if coleccion.size().getInfo() == 0:
-        return None
 
     def calcular_ndvi(img):
         pixel_qa = img.select('QA_PIXEL')
@@ -74,9 +69,8 @@ def buscar_ndvi_periodo(start_date, end_date, region):
         return ndvi.clamp(-1, 1).updateMask(clear_mask)
 
     coleccion_ndvi = coleccion.map(calcular_ndvi)
-    return coleccion_ndvi  # 🔄 Retorna la colección, no la imagen promedio
-
-
+    ndvi_promedio_periodo = coleccion_ndvi.mean().rename('NDVI')
+    return ndvi_promedio_periodo.clamp(-0.1, 0.9)
 
 # Construir un mosaico SAVI promedio para un año
 def buscar_savi_anual(fecha, L=0.5):
@@ -207,99 +201,77 @@ def ndvi_stats():
         logging.exception("Error en estadísticas NDVI")
         return jsonify({'error': f'Error al calcular estadísticas NDVI: {str(e)}'}), 500
 
-
 @app.route('/gee-ndvi-diff')
-def diferencia_ndvi_fecha_unica():
+def diferencia_ndvi():
+    # Nuevos parámetros del frontend
+    start1 = request.args.get('date1_start')
+    end1 = request.args.get('date1_end')
+    start2 = request.args.get('date2_start')
+    end2 = request.args.get('date2_end')
+    threshold = float(request.args.get('threshold', -0.02))
+
+    # Validaciones mínimas
+    if not all([start1, end1, start2, end2]):
+        return jsonify({'error': 'Faltan fechas de inicio o fin para ambos periodos'}), 400
+
     try:
-        # Leer parámetros
-        date1 = request.args.get('date1')
-        date2 = request.args.get('date2')
         minx = float(request.args.get('minx'))
         miny = float(request.args.get('miny'))
         maxx = float(request.args.get('maxx'))
         maxy = float(request.args.get('maxy'))
-        threshold = float(request.args.get('threshold'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Debe proporcionar minx, miny, maxx y maxy'}), 400
 
-        geometry = ee.Geometry.Rectangle([minx, miny, maxx, maxy])
+    try:
+        region = ee.Geometry.BBox(minx, miny, maxx, maxy)
 
-        # Validar área geográfica (limite recomendado: 1M km2)
-        area_km2 = geometry.area(1).divide(1e6).getInfo()
-        if area_km2 > 1_000_000:
-            return jsonify({
-                "error": "El área seleccionada es demasiado grande.",
-                "detalles": f"Área estimada: {area_km2:.2f} km². Por favor selecciona una región más pequeña."
-            }), 400
+        # Usar tu nueva función que NO promedia por año
+        ndvi1 = buscar_ndvi_periodo(start1, end1)
+        ndvi2 = buscar_ndvi_periodo(start2, end2)
+        diff = ndvi2.subtract(ndvi1).rename('NDVI_DIFF').clip(region)
 
-        start1 = ee.Date(date1)
-        end1 = start1.advance(1, 'month')
-        start2 = ee.Date(date2)
-        end2 = start2.advance(1, 'month')
+        vis_params = {
+            'min': -0.2,
+            'max': 0.8,
+            'palette': ['#8c510a', '#d8b365', '#f6e8c3', '#c7eae5', '#5ab4ac', '#01665e']
+        }
+        visual = diff.visualize(**vis_params)
+        map_id = ee.data.getMapId({'image': visual})
 
-        # Obtener colecciones NDVI
-        ndvi1_collection = buscar_ndvi_periodo(start1, end1, geometry)
-        ndvi2_collection = buscar_ndvi_periodo(start2, end2, geometry)
-
-        # Validar respuesta
-        if ndvi1_collection is None or ndvi2_collection is None:
-            return jsonify({
-                "error": "No hay datos NDVI para el área o fechas seleccionadas.",
-                "detalles": "Verifica que las fechas tengan cobertura satelital válida."
-            }), 400
-
-        # NDVI promedio
-        ndvi1 = ndvi1_collection.median()
-        ndvi2 = ndvi2_collection.median()
-        ndvi_diff = ndvi2.subtract(ndvi1).rename('NDVI')
-
-        # Estadísticas
-        stats = ndvi_diff.reduceRegion(
-            reducer=ee.Reducer.mean(),
-            geometry=geometry,
+        stats = diff.reduceRegion(
+            reducer=ee.Reducer.mean()
+                .combine(ee.Reducer.minMax(), sharedInputs=True)
+                .combine(ee.Reducer.stdDev(), sharedInputs=True)
+                .combine(ee.Reducer.count(), sharedInputs=True),
+            geometry=region,
             scale=30,
             maxPixels=1e13
         ).getInfo()
 
-        media_diff = stats.get('NDVI')
-        if media_diff is None:
-            return jsonify({
-                "error": "No se pudo calcular diferencia NDVI.",
-                "detalles": "La región no tiene datos disponibles en las fechas indicadas."
-            }), 400
-
-        # Visualización con paleta personalizada
-        ndvi_diff_vis = {
-            'min': -0.5,
-            'max': 0.5,
-            'palette': ['#8c510a', '#d8b365', '#f6e8c3', '#c7eae5', '#5ab4ac', '#01665e']
-        }
-
-        map_id = ndvi_diff.visualize(**ndvi_diff_vis).getMapId()
-        tile_url = map_id['tile_fetcher'].url_format.replace("{z}", "z").replace("{x}", "x").replace("{y}", "y")
-
-        # Mensaje
-        if media_diff < -threshold:
-            mensaje = f"⚠️ Deforestación detectada entre {date1} y {date2}\nCambio medio: {media_diff:.4f}"
-        elif media_diff > threshold:
-            mensaje = f"🌿 Aumento de vegetación entre {date1} y {date2}\nCambio medio: {media_diff:.4f}"
-        else:
-            mensaje = f"✅ Sin cambios significativos entre {date1} y {date2}\nCambio medio: {media_diff:.4f}"
+        mean_diff = stats.get('NDVI_DIFF_mean', 0)
+        deforestation_detected = mean_diff < threshold
 
         return jsonify({
-            "tile_url": tile_url,
-            "mensaje": mensaje,
-            "ndviChangeStats": stats,
-            "deforestationDetected": media_diff < -threshold,
-            "paletteUsed": ndvi_diff_vis['palette'],
-            "period1": date1,
-            "period2": date2,
-            "name": f"Cambios NDVI ({date1} → {date2})"
+            'name': f'Cambios NDVI ({start1} → {start2})',
+            'tileUrl': map_id['tile_fetcher'].url_format,
+            'paletteUsed': vis_params['palette'],
+            'processingDate': datetime.datetime.utcnow().isoformat() + 'Z',
+            'regionBBox': [minx, miny, maxx, maxy],
+            'ndviChangeStats': {
+                'mean': mean_diff,
+                'min': stats.get('NDVI_DIFF_min', 0),
+                'max': stats.get('NDVI_DIFF_max', 0),
+                'stdDev': stats.get('NDVI_DIFF_stdDev', 0),
+                'count': stats.get('NDVI_DIFF_count', 0)
+            },
+            'deforestationDetected': deforestation_detected,
+            'threshold': threshold,
+            'period1': {'start': start1, 'end': end1},
+            'period2': {'start': start2, 'end': end2}
         })
 
     except Exception as e:
-        print("Error en /gee-ndvi-diff:", e)
-        return jsonify({
-            "error": f"Error al calcular diferencia NDVI: {str(e)}"
-        }), 500
+        return jsonify({'error': f'Error al calcular diferencia NDVI: {str(e)}'}), 500
 
 
 @app.route('/gee-deforestation-zones')
