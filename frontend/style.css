@@ -1,3 +1,41 @@
+.date-container {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.date-container input {
+  flex-grow: 1;
+}
+
+.search-date-btn {
+  padding: 5px 8px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.search-date-btn:hover {
+  background-color: #5a6268;
+}
+
+.list-all-images-btn {
+  padding: 5px 8px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.list-all-images-btn:hover {
+  background-color: #0056b3;
+}
+
 /* style.css */
 
 body {
