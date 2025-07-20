@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 try:
@@ -17,19 +17,24 @@ app = Flask(__name__)
 CORS(app)
 
 def reflectance(image, band):
+    logger.debug(f"Calculating reflectance for band: {band}")
     return image.select(band).multiply(0.0000275).add(-0.2)
 
 def crear_mosaico_ndvi_periodo(fecha_str):
     """Crea un mosaico NDVI de alta calidad para un período de 4 meses alrededor de una fecha."""
+    logger.debug(f"crear_mosaico_ndvi_periodo called with date_str: {fecha_str}")
     fecha_obj = datetime.datetime.strptime(fecha_str, '%Y-%m-%d')
     start_date = (fecha_obj - datetime.timedelta(days=60)).strftime('%Y-%m-%d')
     end_date = (fecha_obj + datetime.timedelta(days=60)).strftime('%Y-%m-%d')
+    logger.debug(f"Calculated date range: {start_date} to {end_date}")
 
     coleccion = (
         ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
         .filterDate(start_date, end_date)
+        #.filterMetadata('CLOUD_COVER', 'less_than', 50) Temporalmente para pruebas de alerta de nubosidad
         .filterMetadata('CLOUD_COVER', 'less_than', 50)
     )
+    logger.debug("Filtered image collection by date and cloud cover.")
 
     def calcular_ndvi(img):
         pixel_qa = img.select('QA_PIXEL')
@@ -39,16 +44,21 @@ def crear_mosaico_ndvi_periodo(fecha_str):
         nir = reflectance(img, 'SR_B5')
         red = reflectance(img, 'SR_B4')
         ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI')
+        logger.debug("Calculated NDVI for an image.")
         return ndvi.clamp(-1, 1).updateMask(clear_mask)
 
     coleccion_ndvi = coleccion.map(calcular_ndvi)
     # Usar 'qualityMosaic' en lugar de 'mean' para obtener los mejores píxeles
     mosaico = coleccion_ndvi.qualityMosaic('NDVI')
+    logger.debug("Applied qualityMosaic to NDVI collection.")
+    #best_image_for_cloud_cover = coleccion.sort('CLOUD_COVER', False).first() # Para pruebas: obtener la imagen con mayor nubosidad
     best_image_for_cloud_cover = coleccion.sort('CLOUD_COVER').first()
     if best_image_for_cloud_cover:
         cloud_cover_value = ee.Number(best_image_for_cloud_cover.get('CLOUD_COVER') or 0).getInfo()
+        logger.debug(f"Best image cloud cover: {cloud_cover_value}")
     else:
         cloud_cover_value = 100 # Default to 100% cloud cover if no image is found
+        logger.debug("No best image found, setting cloud cover to 100.")
     
     return mosaico, start_date, end_date, cloud_cover_value
 

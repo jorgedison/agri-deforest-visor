@@ -39,12 +39,19 @@
       <button id="btn-descargar">Descargar área (.json)</button>
       <button id="btn-capturar">Capturar visor (PNG)</button>
       <input type="file" id="input-geojson" accept=".json" />
-      
+      <button id="btn-leyenda">Ver Leyenda</button>
     </div>
 
-    
-
     <p id="layer-label">Capa activa: -</p>
+
+    <!-- Modal de Leyenda -->
+    <div id="modal-leyenda" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Leyendas del Mapa</h2>
+        <div id="legend-content"></div>
+      </div>
+    </div>
 
     <div id="stats-panel" style="display:none">
       <h3>Estadísticas NDVI</h3>
@@ -69,6 +76,6 @@
       </div>
   </div>
 
-  <script src="main.js"></script>
+  <script src="frontend/main.js"></script>
 </body>
 </html>

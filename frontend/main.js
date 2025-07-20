@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     map.on(L.Draw.Event.CREATED, (e) => {
         drawnItems.clearLayers();
         drawnItems.addLayer(e.layer);
+        updateButtonStates(); // Habilitar botones que dependen del polígono
     });
 
     // --- Elementos del DOM ---
@@ -46,6 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const legendBtn = document.getElementById('btn-leyenda');
     const legendModal = document.getElementById('modal-leyenda');
     const closeModal = document.querySelector('.modal .close');
+    const diffLegendBtn = document.getElementById('btn-diff-legend');
+    const deforestationLegendBtn = document.getElementById('btn-deforestation-legend');
+    const startDateInput = document.getElementById('start-date');
+    const endDateInput = document.getElementById('end-date');
 
     const searchStartDateBtn = document.getElementById('search-start-date');
     const searchEndDateBtn = document.getElementById('search-end-date');
@@ -58,6 +63,30 @@ document.addEventListener('DOMContentLoaded', () => {
     legendBtn.addEventListener('click', () => legendModal.style.display = 'block');
     closeModal.addEventListener('click', () => legendModal.style.display = 'none');
     window.addEventListener('click', (e) => { if (e.target == legendModal) { legendModal.style.display = 'none'; } });
+
+    // Listener para el nuevo botón de leyenda de Diferencia NDVI
+    if (diffLegendBtn) {
+        diffLegendBtn.addEventListener('click', () => {
+            const diffLegend = document.getElementById('diff-legend');
+            if (diffLegend.style.display === 'block') {
+                diffLegend.style.display = 'none';
+            } else {
+                diffLegend.style.display = 'block';
+            }
+        });
+    }
+
+    // Listener para el nuevo botón de leyenda de Zonas Deforestadas
+    if (deforestationLegendBtn) {
+        deforestationLegendBtn.addEventListener('click', () => {
+            const deforestationLegend = document.getElementById('deforestation-legend');
+            if (deforestationLegend.style.display === 'block') {
+                deforestationLegend.style.display = 'none';
+            } else {
+                deforestationLegend.style.display = 'block';
+            }
+        });
+    }
 
     if (candidateImagesCloseBtn) {
         candidateImagesCloseBtn.addEventListener('click', () => candidateImagesModal.style.display = 'none');
@@ -73,12 +102,38 @@ document.addEventListener('DOMContentLoaded', () => {
     diffBtn.addEventListener('click', handleNdviff);
     deforestationBtn.addEventListener('click', handleDeforestationFromPolygon);
     
-    cleanBtn.addEventListener('click', clearMap);
+    cleanBtn.addEventListener('click', () => clearMap({ all: true }));
     drawBtn.addEventListener('click', () => new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable());
     downloadBtn.addEventListener('click', downloadGeoJSON);
     captureBtn.addEventListener('click', captureMap);
 
+    startDateInput.addEventListener('change', updateButtonStates);
+    endDateInput.addEventListener('change', updateButtonStates);
+
     // --- Lógica de la Aplicación ---
+
+    function toggleButtonLoading(button, isLoading) {
+        if (isLoading) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner"></span>Cargando...';
+        } else {
+            button.disabled = false;
+            // Restaurar texto original
+            if (button.id === 'btn-comparar-ndvi') button.innerHTML = 'Comparar NDVI';
+            if (button.id === 'btn-detectar') button.innerHTML = 'Diferencia NDVI';
+            if (button.id === 'btn-zonas-poly') button.innerHTML = 'Zonas deforestadas desde polígono';
+        }
+    }
+
+    function updateButtonStates() {
+        const datesSelected = startDateInput.value && endDateInput.value;
+        const polygonDrawn = drawnItems.getLayers().length > 0;
+
+        compareBtn.disabled = !datesSelected;
+        diffBtn.disabled = !datesSelected;
+        deforestationBtn.disabled = !datesSelected || !polygonDrawn;
+        downloadBtn.disabled = !polygonDrawn;
+    }
 
     async function findOptimalDate(dateFieldId) {
         const dateInput = document.getElementById(dateFieldId);
@@ -103,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`${API_URL}/find-best-image-date`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     targetDate: dateValue, // Enviar solo la fecha objetivo
                     geometry: geometry
                 })
@@ -141,12 +196,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             showStatus(err.message, true);
+        } finally {
+            updateButtonStates();
         }
     }
 
     function getDates() {
-        const date1 = document.getElementById('start-date').value;
-        const date2 = document.getElementById('end-date').value;
+        const date1 = startDateInput.value;
+        const date2 = endDateInput.value;
         if (!date1 || !date2) {
             showStatus('Por favor, seleccione ambas fechas.', true);
             return null;
@@ -162,12 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return drawnItems.toGeoJSON().features[0].geometry;
     }
 
+    //const CLOUD_COVER_ALERT_THRESHOLD = 0.1; // Umbral de nubosidad para la alerta (temporalmente bajo para pruebas)
+    const CLOUD_COVER_ALERT_THRESHOLD = 20; // Umbral de nubosidad para la alerta
+
     async function handleCompareNdvi() {
         const dates = getDates();
         if (!dates) return;
 
-        clearMap();
+        clearMap({ keepPolygon: true });
         showStatus('Cargando capas NDVI...');
+        toggleButtonLoading(compareBtn, true);
 
         try {
             const [res1, res2] = await Promise.all([
@@ -186,20 +247,42 @@ document.addEventListener('DOMContentLoaded', () => {
             ndviLayer1 = L.tileLayer(data1.tileUrl, { opacity: 0.8 });
             ndviLayer2 = L.tileLayer(data2.tileUrl, { opacity: 0.8 });
 
-            // Usar el nombre devuelto por la API para la leyenda, que es más preciso
             const baseMaps = {
                 [data1.name]: ndviLayer1.addTo(map),
                 [data2.name]: ndviLayer2
             };
 
             if (layerControl) map.removeControl(layerControl);
-            // Usar el primer argumento de L.control.layers para radio buttons
             layerControl = L.control.layers(baseMaps, null, { position: 'topright', collapsed: false }).addTo(map);
             
+            legendBtn.style.display = 'block'; // Mostrar el botón de leyenda principal
             showStatus('Capas NDVI cargadas. Seleccione una capa para visualizar.');
+
+            // Verificar nubosidad y mostrar alerta si es necesario
+            let cloudAlertMessage = '';
+            if (data1.cloudCover > CLOUD_COVER_ALERT_THRESHOLD) {
+                cloudAlertMessage += `La imagen para la fecha ${dates.date1} tiene ${data1.cloudCover.toFixed(2)}% de nubes. `; 
+            }
+            if (data2.cloudCover > CLOUD_COVER_ALERT_THRESHOLD) {
+                cloudAlertMessage += `La imagen para la fecha ${dates.date2} tiene ${data2.cloudCover.toFixed(2)}% de nubes. `; 
+            }
+
+            if (cloudAlertMessage) {
+                const userConfirmed = confirm(
+                    `${cloudAlertMessage}La calidad del análisis puede verse afectada. \n\n` +
+                    `¿Desea continuar con estas fechas o prefiere buscar una fecha distinta con menor nubosidad?`
+                );
+                if (!userConfirmed) {
+                    showStatus('Operación cancelada por el usuario. Por favor, seleccione fechas con menor nubosidad.', true);
+                    toggleButtonLoading(compareBtn, false);
+                    return; // Detener la ejecución si el usuario cancela
+                }
+            }
 
         } catch (err) {
             showStatus(err.message, true);
+        } finally {
+            toggleButtonLoading(compareBtn, false);
         }
     }
 
@@ -207,8 +290,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const dates = getDates();
         if (!dates) return;
 
-        clearMap();
+        clearMap({ keepPolygon: true });
         showStatus('Calculando diferencia de NDVI...');
+        toggleButtonLoading(diffBtn, true);
 
         try {
             const response = await fetch(`${API_URL}/gee-ndvi-diff?date1=${dates.date1}&date2=${dates.date2}`);
@@ -217,10 +301,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.error) throw new Error(data.error);
 
             diffLayer = L.tileLayer(data.tileUrl, { opacity: 0.7 }).addTo(map);
+            console.log("Mostrando la leyenda de diferencia NDVI");
+            document.getElementById('diff-legend').style.display = 'block';
+            diffLegendBtn.style.display = 'block'; // Mostrar el botón de leyenda de diferencia
             showStatus('Capa de diferencia NDVI cargada.');
 
         } catch (err) {
+            console.error("Error en handleNdviff:", err);
             showStatus(err.message, true);
+        } finally {
+            toggleButtonLoading(diffBtn, false);
         }
     }
 
@@ -230,13 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!dates || !geometry) return;
 
         showStatus('Analizando zonas de deforestación...');
+        toggleButtonLoading(deforestationBtn, true);
 
         try {
             const response = await fetch(`${API_URL}/gee-deforestation-zones-from-geojson`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    date1: dates.date1, 
+                body: JSON.stringify({
+                    date1: dates.date1,
                     date2: dates.date2,
                     geometry: geometry,
                     threshold: parseFloat(thresholdInput.value)
@@ -254,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deforestationLayer = L.geoJSON(data.features, {
                 style: { color: '#ff0000', weight: 2, fillOpacity: 0.5 }
             }).addTo(map);
+            deforestationLegendBtn.style.display = 'block'; // Mostrar el botón de leyenda de deforestación
             
             const summary = data.deforestationSummary;
             const message = `${summary.zoneCount} zonas de deforestación detectadas. (Detección: ${summary.deforestationDetected})`;
@@ -261,18 +353,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (err) {
             showStatus(err.message, true);
+        } finally {
+            toggleButtonLoading(deforestationBtn, false);
         }
     }
 
-    function clearMap() {
+    function clearMap(options = {}) {
         if (ndviLayer1) map.removeLayer(ndviLayer1);
         if (ndviLayer2) map.removeLayer(ndviLayer2);
-        if (diffLayer) map.removeLayer(diffLayer);
-        if (deforestationLayer) map.removeLayer(deforestationLayer);
+        if (diffLayer) {
+            map.removeLayer(diffLayer);
+            document.getElementById('diff-legend').style.display = 'none';
+            diffLegendBtn.style.display = 'none'; // Ocultar el botón de leyenda de diferencia
+        }
+        if (deforestationLayer) {
+            map.removeLayer(deforestationLayer);
+            document.getElementById('deforestation-legend').style.display = 'none'; // Ocultar la leyenda de deforestación
+            deforestationLegendBtn.style.display = 'none'; // Ocultar el botón de leyenda de deforestación
+        }
         
         if (layerControl) map.removeControl(layerControl);
-        drawnItems.clearLayers();
+        
+        legendBtn.style.display = 'none'; // Ocultar el botón de leyenda principal
+        document.getElementById('modal-leyenda').style.display = 'none'; // Asegurarse de que el modal de leyenda esté oculto
+
+        if (options.all) {
+            drawnItems.clearLayers();
+        }
+        
         showStatus('Mapa limpiado.');
+        updateButtonStates();
     }
 
     function downloadGeoJSON() {
@@ -314,7 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
         statusMessage.style.color = isError ? '#721c24' : '#155724';
 
-        // Clear and hide candidate images section if it was previously shown
         if (candidateImagesListContentDiv) {
             candidateImagesListContentDiv.innerHTML = '';
         }
@@ -324,22 +433,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById("input-geojson")?.addEventListener("change", function (e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (event) {
-        try {
-            const geojson = JSON.parse(event.target.result);
-            const layer = L.geoJSON(geojson, {
-                style: { color: "#ff6600", weight: 2, fillOpacity: 0.2 },
-            });
-            drawnItems.clearLayers();
-            drawnItems.addLayer(layer);
-            map.fitBounds(layer.getBounds());
-        } catch (err) {
-            alert("El archivo no es un GeoJSON válido.");
-        }
-    };
-    reader.readAsText(file);
-});
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            try {
+                const geojson = JSON.parse(event.target.result);
+                const layer = L.geoJSON(geojson, {
+                    style: { color: "#ff6600", weight: 2, fillOpacity: 0.2 },
+                });
+                drawnItems.clearLayers();
+                drawnItems.addLayer(layer);
+                map.fitBounds(layer.getBounds());
+                updateButtonStates();
+            } catch (err) {
+                alert("El archivo no es un GeoJSON válido.");
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // Inicializar estados de los botones al cargar
+    updateButtonStates();
 });

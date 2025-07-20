@@ -70,21 +70,82 @@ body {
   background-color: #0b5ed7;
 }
 
-#legend {
-  margin-top: 15px;
+/* Estilos para la leyenda */
+.info.legend {
+  padding: 6px 8px;
+  background: white;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  line-height: 18px;
+  color: #555;
+}
+.info.legend h4 {
+  margin: 0 0 5px;
+  color: #777;
+}
+.info.legend i {
+  width: 18px;
+  height: 18px;
+  float: left;
+  margin-right: 8px;
+  opacity: 0.7;
+}
+.info.legend div {
+  overflow: hidden;
 }
 
-#legend .palette {
-  display: flex;
-  gap: 4px;
-  margin-top: 6px;
+.custom-legend-control {
+    z-index: 1000; /* Ensure it's above other map elements */
+    right: 10px; /* Distance from the right edge */
+    /* The following styles are moved from .info.legend to ensure they apply to the control container */
+    padding: 6px 8px;
+    background: white;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    line-height: 18px;
+    color: #555;
 }
 
-#legend .palette span {
-  display: inline-block;
-  width: 24px;
-  height: 12px;
-  border: 1px solid #ccc;
+/* Specific positioning for the Comparar NDVI legend */
+.custom-legend-control:not(.diff-legend-control) {
+    bottom: 20px; /* Position from the bottom */
+}
+
+/* Specific positioning for the Diferencia NDVI legend */
+.diff-legend-control {
+    bottom: 120px; /* Position above the first legend, adjust as needed */
+}
+
+/* Styles for the legend toggle button */
+#toggle-legend-btn {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 5px; /* Space between button and legend content */
+}
+
+#toggle-legend-btn:hover {
+    background-color: #0b5ed7;
+}
+
+/* Style for the legend content container */
+#legend-content {
+    background: white;
+    padding: 6px 8px;
+    border-radius: 5px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+#legend-content .info.legend {
+    background: none; /* Remove background from inner legend content */
+    box-shadow: none; /* Remove shadow from inner legend content */
+    padding: 0; /* Remove padding from inner legend content */
 }
 
 #layer-label {

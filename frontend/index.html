@@ -14,7 +14,13 @@
 <body>
 
   <!-- Botón para abrir la leyenda -->
-  <button id="btn-leyenda" class="legend-button">Ver leyenda</button>
+  <button id="btn-leyenda" class="legend-button" style="display: none;">Ver leyenda</button>
+
+  <!-- Botón para abrir la leyenda de Diferencia NDVI -->
+  <button id="btn-diff-legend" class="legend-button" style="display: none; top: 50px;">Ver Leyenda Diferencia NDVI</button>
+
+  <!-- Botón para abrir la leyenda de Zonas Deforestadas -->
+  <button id="btn-deforestation-legend" class="legend-button" style="display: none; top: 90px;">Ver Leyenda Deforestación</button>
 
   <!-- Modal de leyenda NDVI -->
   <div id="modal-leyenda" class="modal">
@@ -32,9 +38,27 @@
     </div>
   </div>
 
-  
+    <div id="map"></div>
 
-  <div id="map"></div>
+  <!-- Leyenda para Diferencia NDVI -->
+  <div id="diff-legend" class="leaflet-control leaflet-bar" style="display: none;">
+    <h4>Diferencia NDVI</h4>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background: red;"></span> Disminución significativa (-0.5 a -0.25)</li>
+      <li><span class="color-box" style="background: yellow;"></span> Disminución moderada (-0.25 a 0)</li>
+      <li><span class="color-box" style="background: white;"></span> Sin cambio (0)</li>
+      <li><span class="color-box" style="background: cyan;"></span> Aumento moderado (0 a 0.25)</li>
+      <li><span class="color-box" style="background: green;"></span> Aumento significativo (0.25 a 0.5)</li>
+    </ul>
+  </div>
+
+  <!-- Leyenda para Zonas Deforestadas -->
+  <div id="deforestation-legend" class="leaflet-control leaflet-bar" style="display: none;">
+    <h4>Zonas Deforestadas</h4>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background: #ff0000; opacity: 0.5;"></span> Área Deforestada</li>
+    </ul>
+  </div>
 
   <div id="controls">
     <h2>Monitoreo de Vegetación</h2>
@@ -42,22 +66,25 @@
     <label for="start-date">Fecha inicial:</label>
     <div class="date-container">
       <input type="date" id="start-date" value="2020-01-01" />
-      <button class="search-date-btn" id="search-start-date" title="Buscar fecha óptima">🔎</button>
+      <button class="search-date-btn" id="search-start-date" title="Buscar fecha óptima"></button>
     </div>
 
     <label for="end-date">Fecha final:</label>
     <div class="date-container">
       <input type="date" id="end-date" value="2023-01-01" />
-      <button class="search-date-btn" id="search-end-date" title="Buscar fecha óptima">🔎</button>
+      <button class="search-date-btn" id="search-end-date" title="Buscar fecha óptima"></button>
     </div>
 
     <label for="threshold">Umbral NDVI:</label>
     <input type="number" id="threshold" value="0.2" step="0.01" min="0" max="1" />
 
     <div class="buttons">
-      <button id="btn-comparar-ndvi">Comparar NDVI</button>
-      <button id="btn-detectar">Diferencia NDVI</button>
-      <button id="btn-zonas-poly">Zonas deforestadas desde polígono</button>
+      <fieldset>
+        <legend>NDVI</legend>
+        <button id="btn-comparar-ndvi" disabled>Comparar NDVI</button>
+        <button id="btn-detectar" disabled>Diferencia NDVI</button>
+        <button id="btn-zonas-poly" disabled>Zonas deforestadas desde polígono</button>
+      </fieldset>
       <hr>
       <button id="btn-limpiar">Limpiar mapa</button>
       <button id="btn-dibujar">Dibujar área</button>
@@ -74,10 +101,11 @@
       <span id="status-text"></span>
       <div id="candidate-images-list"></div>
     </div>
-    <div id="error-output" class="error-output"></div>
 
+    <div id="error-output" class="error-output"></div>
   </div>
 
   <script src="main.js"></script>
 </body>
 </html>
+

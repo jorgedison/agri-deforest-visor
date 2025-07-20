@@ -1,204 +1,266 @@
-.date-container {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.date-container input {
-  flex-grow: 1;
-}
-
-.search-date-btn {
-  padding: 5px 8px;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.search-date-btn:hover {
-  background-color: #5a6268;
-}
-
-.list-all-images-btn {
-  padding: 5px 8px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.list-all-images-btn:hover {
-  background-color: #0056b3;
-}
-
-/* style.css */
-
-body {
+body, html {
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden; /* Evitar barras de scroll en el body */
 }
 
 #map {
   position: absolute;
   top: 0;
+  left: 360px; /* Ancho del panel de controles */
   right: 0;
   bottom: 0;
-  left: 300px; /* Deja espacio para el panel de control */
-  z-index: 1;
 }
 
 #controls {
   position: absolute;
   top: 0;
   left: 0;
-  bottom: 0;
-  width: 300px;
-  background-color: #f8f9fa;
-  padding: 15px;
+  width: 320px;
+  height: 100%;
+  padding: 20px;
+  background-color: #f9f9f9;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* Sombra a la derecha */
   overflow-y: auto;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  z-index: 999;
+  z-index: 1000; /* Asegurar que esté sobre el mapa */
 }
 
 #controls h2 {
   margin-top: 0;
-  font-size: 18px;
+  font-size: 1.5em;
+  color: #333;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
 }
 
 #controls label {
   display: block;
-  margin-top: 10px;
+  margin-top: 15px;
   font-weight: bold;
+  color: #555;
 }
 
 #controls input[type="date"],
 #controls input[type="number"] {
-  width: 100%;
-  padding: 5px;
-  margin-top: 4px;
-  margin-bottom: 8px;
-  box-sizing: border-box;
+  width: calc(100% - 22px);
+  padding: 8px 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em;
+}
+
+.date-container {
+  display: flex;
+  align-items: center;
+}
+
+.date-container input[type="date"] {
+  flex-grow: 1;
+}
+
+.search-date-btn {
+  appearance: none; /* Anular estilos predeterminados del navegador */
+  -webkit-appearance: none; /* Para compatibilidad con WebKit */
+  -moz-appearance: none; /* Para compatibilidad con Mozilla */
+  width: 30px; /* Ancho fijo */
+  height: 30px; /* Alto fijo */
+  margin-left: 5px;
+  padding: 0; /* Eliminar padding predeterminado */
+  background-color: transparent; /* Fondo transparente */
+  border: none; /* Sin borde */
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 1.5em; /* Tamaño del ícono */
+  line-height: 1; /* Asegurar el centrado vertical */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333; /* Color del ícono */
+  transition: color 0.2s; /* Transición suave para el hover */
+  outline: none; /* Eliminar el contorno de enfoque */
+}
+
+.search-date-btn::before {
+  content: "\1F50D"; /* Código Unicode para la lupa */
+}
+
+.search-date-btn:hover {
+  color: #007bff; /* Color al pasar el ratón */
 }
 
 .buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
-.buttons button {
-  padding: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  background-color: #0d6efd;
-  border: none;
-  color: white;
+.buttons fieldset {
+  border: 1px solid #ccc;
+  padding: 10px;
   border-radius: 4px;
-  transition: background-color 0.2s ease-in-out;
 }
 
-.buttons button:hover {
-  background-color: #0b5ed7;
+.buttons legend {
+  font-weight: bold;
+  color: #555;
 }
 
-#legend {
-  margin-top: 15px;
-}
-
-#legend .palette {
-  display: flex;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-#legend .palette span {
-  display: inline-block;
-  width: 24px;
-  height: 12px;
-  border: 1px solid #ccc;
-}
-
-#layer-label {
-  margin-top: 12px;
-  font-style: italic;
-  font-size: 13px;
-  color: #333;
-}
-
-#stats-panel {
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  padding: 15px;
-  background: #f9f9f9;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-}
-
-.legend-button {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #006d2c;
+#controls button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background-color: #007bff;
   color: white;
   border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
-  z-index: 1001;
+  font-size: 1em;
+  transition: background-color 0.3s, opacity 0.3s;
 }
 
+#controls button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+#controls button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.file-upload-section {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+/* Estilos para el modal de leyenda */
 .modal {
-  display: none;
-  position: fixed;
-  z-index: 1002;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.5);
+  display: none; 
+  position: fixed; 
+  z-index: 1001; 
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto; 
+  background-color: rgba(0,0,0,0.4);
 }
 
 .modal-content {
-  background-color: #fff;
-  margin: 10% auto;
+  background-color: #fefefe;
+  margin: 15% auto; 
   padding: 20px;
-  width: 320px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 500px;
   border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
 }
 
 .close {
+  color: #aaa;
   float: right;
-  font-size: 24px;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.legend-button {
+  position: absolute;
+  top: 10px;
+  left: 380px; /* Ajustado para estar fuera del panel de controles */
+  z-index: 1000;
+  padding: 8px 12px;
+  background-color: white;
+  border: 2px solid #ccc;
+  border-radius: 4px;
   cursor: pointer;
 }
 
 .leyenda-lista {
   list-style: none;
-  padding-left: 0;
+  padding: 0;
+}
+
+.leyenda-lista li {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .color-box {
-  display: inline-block;
-  width: 20px; height: 20px;
+  width: 20px;
+  height: 20px;
   margin-right: 10px;
+  border: 1px solid #000;
+}
+
+/* Estilos para el spinner de carga */
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+  -webkit-animation: spin 1s ease-in-out infinite;
   vertical-align: middle;
-  border: 1px solid #ccc;
 }
 
-style: feature => {
-  const ndvi = feature.properties.ndvi ?? 0;
-  const color = getColorFromNDVI(ndvi);
-  return {
-    color: color,
-    fillColor: color,
-    weight: 2,
-    fillOpacity: 0.6,
-    opacity: 0.8
-  };
+#diff-legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.65);
 }
 
+#deforestation-legend {
+  position: absolute;
+  bottom: 150px; /* Adjust as needed to be above diff-legend */
+  right: 20px;
+  z-index: 1000;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+}
+
+#deforestation-legend h4 {
+  margin: 0 0 5px 0;
+  text-align: center;
+}
+
+#deforestation-legend .leyenda-lista li {
+  font-size: 12px;
+}
+
+#diff-legend h4 {
+  margin: 0 0 5px 0;
+  text-align: center;
+}
+
+#diff-legend .leyenda-lista li {
+  font-size: 12px;
+}
+
+
+@keyframes spin {
+  to { -webkit-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+  to { -webkit-transform: rotate(360deg); }
+}
