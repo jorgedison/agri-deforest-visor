@@ -53,8 +53,8 @@ Abre tu navegador en `http://localhost:8081`.
 
 ## 🧠 Funcionalidades
 
-- Visualización del NDVI de una fecha específica
-- Comparación temporal de NDVI
+- Visualización del NDVI, SAVI y NBR de una fecha específica
+- Comparación temporal de NDVI, SAVI y NBR
 - Detección de zonas deforestadas (con visualización en GeoJSON)
 - Herramientas interactivas: dibujo, limpieza y descarga del área
 
