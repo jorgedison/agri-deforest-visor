@@ -22,6 +22,24 @@
   <!-- Botón para abrir la leyenda de Zonas Deforestadas -->
   <button id="btn-deforestation-legend" class="legend-button" style="display: none; top: 90px;">Ver Leyenda Deforestación</button>
 
+  <!-- Botón para abrir la leyenda SAVI -->
+  <button id="btn-savi-legend" class="legend-button" style="display: none; top: 130px;">Ver Leyenda SAVI</button>
+
+  <!-- Botón para abrir la leyenda Diferencia SAVI -->
+  <button id="btn-diff-savi-legend" class="legend-button" style="display: none; top: 170px;">Ver Leyenda Diferencia SAVI</button>
+
+  <!-- Botón para abrir la leyenda Zonas Deforestadas SAVI -->
+  <button id="btn-deforestation-savi-legend" class="legend-button" style="display: none; top: 210px;">Ver Leyenda Deforestación SAVI</button>
+
+  <!-- Botón para abrir la leyenda NBR -->
+  <button id="btn-nbr-legend" class="legend-button" style="display: none; top: 250px;">Ver Leyenda NBR</button>
+
+  <!-- Botón para abrir la leyenda Diferencia NBR -->
+  <button id="btn-diff-nbr-legend" class="legend-button" style="display: none; top: 290px;">Ver Leyenda Diferencia NBR</button>
+
+  <!-- Botón para abrir la leyenda Zonas Deforestadas NBR -->
+  <button id="btn-deforestation-nbr-legend" class="legend-button" style="display: none; top: 330px;">Ver Leyenda Deforestación NBR</button>
+
   <!-- Modal de leyenda NDVI -->
   <div id="modal-leyenda" class="modal">
     <div class="modal-content">
@@ -34,6 +52,37 @@
         <li><span class="color-box" style="background:#c7eae5;"></span> 0.4 - 0.6 - Vegetación moderada</li>
         <li><span class="color-box" style="background:#5ab4ac;"></span> 0.6 - 0.8 - Vegetación abundante</li>
         <li><span class="color-box" style="background:#01665e;"></span> &gt; 0.8 - Vegetación densa</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Modal de leyenda SAVI -->
+  <div id="modal-savi-leyenda" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Leyenda SAVI</h2>
+      <ul class="leyenda-lista">
+        <li><span class="color-box" style="background:#A52A2A;"></span> SAVI &lt; 0.2 - Suelo desnudo / Vegetación muy escasa</li>
+        <li><span class="color-box" style="background:#FFD700;"></span> 0.2 - 0.4 - Vegetación escasa</li>
+        <li><span class="color-box" style="background:#ADFF2F;"></span> 0.4 - 0.6 - Vegetación moderada</li>
+        <li><span class="color-box" style="background:#008000;"></span> 0.6 - 0.8 - Vegetación densa</li>
+        <li><span class="color-box" style="background:#006400;"></span> &gt; 0.8 - Vegetación muy densa</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Modal de leyenda NBR -->
+  <div id="modal-nbr-leyenda" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Leyenda NBR</h2>
+      <ul class="leyenda-lista">
+        <li><span class="color-box" style="background:#8B0000;"></span> NBR &lt; -0.5 - Quemadura de alta severidad</li>
+        <li><span class="color-box" style="background:#FF4500;"></span> -0.5 - 0 - Quemadura de severidad moderada</li>
+        <li><span class="color-box" style="background:#FFA500;"></span> 0 - 0.2 - Áreas ligeramente quemadas</li>
+        <li><span class="color-box" style="background:#FFFF00;"></span> 0.2 - 0.4 - Vegetación estresada o en recuperación</li>
+        <li><span class="color-box" style="background:#ADFF2F;"></span> 0.4 - 0.7 - Vegetación saludable</li>
+        <li><span class="color-box" style="background:#008000;"></span> &gt; 0.7 - Vegetación muy saludable</li>
       </ul>
     </div>
   </div>
@@ -60,6 +109,47 @@
     </ul>
   </div>
 
+  <!-- Leyenda para Diferencia SAVI -->
+  <div id="diff-savi-legend" class="leaflet-control leaflet-bar" style="display: none;">
+    <h4>Diferencia SAVI</h4>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background: red;"></span> Disminución significativa (-0.5 a -0.25)</li>
+      <li><span class="color-box" style="background: yellow;"></span> Disminución moderada (-0.25 a 0)</li>
+      <li><span class="color-box" style="background: white;"></span> Sin cambio (0)</li>
+      <li><span class="color-box" style="background: cyan;"></span> Aumento moderado (0 a 0.25)</li>
+      <li><span class="color-box" style="background: green;"></span> Aumento significativo (0.25 a 0.5)</li>
+    </ul>
+  </div>
+
+  <!-- Leyenda para Zonas Deforestadas SAVI -->
+  <div id="deforestation-savi-legend" class="leaflet-control leaflet-bar" style="display: none;">
+    <h4>Zonas Deforestadas SAVI</h4>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background: #ff0000; opacity: 0.5;"></span> Área Deforestada (SAVI)</li>
+    </ul>
+  </div>
+
+  <!-- Leyenda para Diferencia NBR -->
+  <div id="diff-nbr-legend" class="leaflet-control leaflet-bar" style="display: none;">
+    <h4>Diferencia NBR</h4>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background: #006400;"></span> Crecimiento o recuperación (-0.5 a -0.1)</li>
+      <li><span class="color-box" style="background: #ADFF2F;"></span> Sin cambio / No quemado (-0.1 a 0.1)</li>
+      <li><span class="color-box" style="background: #FFFF00;"></span> Baja severidad (0.1 a 0.27)</li>
+      <li><span class="color-box" style="background: #FFA500;"></span> Severidad moderada (0.27 a 0.44)</li>
+      <li><span class="color-box" style="background: #FF4500;"></span> Alta severidad (0.44 a 0.66)</li>
+      <li><span class="color-box" style="background: #8B0000;"></span> Muy alta severidad (0.66 a 1.0)</li>
+    </ul>
+  </div>
+
+  <!-- Leyenda para Zonas Deforestadas NBR -->
+  <div id="deforestation-nbr-legend" class="leaflet-control leaflet-bar" style="display: none;">
+    <h4>Zonas Deforestadas NBR</h4>
+    <ul class="leyenda-lista">
+      <li><span class="color-box" style="background: #ff0000; opacity: 0.5;"></span> Área Deforestada (NBR)</li>
+    </ul>
+  </div>
+
   <div id="controls">
     <h2>Monitoreo de Vegetación</h2>
 
@@ -75,7 +165,7 @@
       <button class="search-date-btn" id="search-end-date" title="Buscar fecha óptima"></button>
     </div>
 
-    <label for="threshold">Umbral NDVI:</label>
+    <label for="threshold">Umbral de Cambio:</label>
     <input type="number" id="threshold" value="0.2" step="0.01" min="0" max="1" />
 
     <div class="buttons">
@@ -84,6 +174,18 @@
         <button id="btn-comparar-ndvi" disabled>Comparar NDVI</button>
         <button id="btn-detectar" disabled>Diferencia NDVI</button>
         <button id="btn-zonas-poly" disabled>Zonas deforestadas desde polígono</button>
+      </fieldset>
+      <fieldset>
+        <legend>SAVI</legend>
+        <button id="btn-comparar-savi" disabled>Comparar SAVI</button>
+        <button id="btn-detectar-savi" disabled>Diferencia SAVI</button>
+        <button id="btn-zonas-poly-savi" disabled>Zonas deforestadas desde polígono (SAVI)</button>
+      </fieldset>
+      <fieldset>
+        <legend>NBR</legend>
+        <button id="btn-comparar-nbr" disabled>Comparar NBR</button>
+        <button id="btn-detectar-nbr" disabled>Diferencia NBR</button>
+        <button id="btn-zonas-poly-nbr" disabled>Zonas deforestadas desde polígono (NBR)</button>
       </fieldset>
       <hr>
       <button id="btn-limpiar">Limpiar mapa</button>

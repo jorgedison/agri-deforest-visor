@@ -50,7 +50,7 @@ body, html {
   margin-top: 5px;
   border: 1px solid #dcdcdc; /* Borde más suave */
   border-radius: 6px; /* Bordes más redondeados */
-  font-size: 0.95em; /* Fuente ligeramente más pequeña */
+  font-size: 0.9em; /* Fuente ligeramente más pequeña */
   box-sizing: border-box; /* Incluir padding y borde en el ancho */
 }
 
@@ -71,12 +71,13 @@ body, html {
   height: 32px; /* Más grande */
   margin-left: 8px; /* Más espacio */
   padding: 0;
-  background-color: transparent;
+  background-color: transparent !important;
+  background: none; /* Asegura que no haya ningún fondo */
   border: 1px solid #dcdcdc; /* Borde sutil */
   cursor: pointer;
   border-radius: 6px; /* Más redondeado */
-  font-size: 1.3em; /* Ícono más grande */
-  line-height: 1;
+  font-size: 1.1em; /* Tamaño del ícono */
+  line-height: 0; /* Ajustar para centrar el ícono */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86,7 +87,7 @@ body, html {
 }
 
 .search-date-btn::before {
-  content: "\1F50D"; /* Código Unicode para la lupa */
+  content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20px" height="20px"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* SVG de lupa */
 }
 
 .search-date-btn:hover {
@@ -125,7 +126,7 @@ body, html {
   border: none;
   border-radius: 6px; /* Más redondeado */
   cursor: pointer;
-  font-size: 0.95em; /* Fuente ligeramente más pequeña */
+  font-size: 0.9em; /* Fuente ligeramente más pequeña */
   font-weight: 600; /* Más negrita */
   transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra sutil */
@@ -208,6 +209,7 @@ body, html {
   margin-bottom: 8px;
   display: flex;
   align-items: center;
+  font-size: 0.85em;
 }
 
 .color-box {
@@ -259,16 +261,72 @@ body, html {
 }
 
 #deforestation-legend .leyenda-lista li {
-  font-size: 12px;
+  font-size: 11px;
 }
 
-#diff-legend h4 {
+/* Estilos para leyendas SAVI */
+#diff-savi-legend {
+  position: absolute;
+  bottom: 280px; /* Ajustar para que no se superponga con otras leyendas */
+  right: 20px;
+  z-index: 1000;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+}
+
+#deforestation-savi-legend {
+  position: absolute;
+  bottom: 410px; /* Ajustar */
+  right: 20px;
+  z-index: 1000;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+}
+
+/* Estilos para leyendas NBR */
+#diff-nbr-legend {
+  position: absolute;
+  bottom: 540px; /* Ajustar */
+  right: 20px;
+  z-index: 1000;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+}
+
+#deforestation-nbr-legend {
+  position: absolute;
+  bottom: 670px; /* Ajustar */
+  right: 20px;
+  z-index: 1000;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+}
+
+#diff-legend h4,
+#diff-savi-legend h4,
+#diff-nbr-legend h4,
+#deforestation-legend h4,
+#deforestation-savi-legend h4,
+#deforestation-nbr-legend h4 {
   margin: 0 0 5px 0;
   text-align: center;
 }
 
-#diff-legend .leyenda-lista li {
-  font-size: 12px;
+#diff-legend .leyenda-lista li,
+#diff-savi-legend .leyenda-lista li,
+#diff-nbr-legend .leyenda-lista li,
+#deforestation-legend .leyenda-lista li,
+#deforestation-savi-legend .leyenda-lista li,
+#deforestation-nbr-legend .leyenda-lista li {
+  font-size: 11px;
 }
 
 

@@ -1,0 +1,455 @@
+{
+    "info": {
+        "_postman_id": "YOUR_POSTMAN_COLLECTION_ID",
+        "name": "Agri-Deforest-Visor API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_collection_id": "YOUR_POSTMAN_COLLECTION_ID"
+    },
+    "item": [
+        {
+            "name": "Get NDVI Tile URL",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-tile-url?date=2023-01-15",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-tile-url"
+                    ],
+                    "query": [
+                        {
+                            "key": "date",
+                            "value": "2023-01-15",
+                            "description": "Date in YYYY-MM-DD format"
+                        }
+                    ]
+                },
+                "description": "Obtiene la URL de un mosaico NDVI para una fecha específica."
+            },
+            "response": []
+        },
+        {
+            "name": "Get NDVI Difference",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-ndvi-diff?date1=2022-01-15&date2=2023-01-15",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-ndvi-diff"
+                    ],
+                    "query": [
+                        {
+                            "key": "date1",
+                            "value": "2022-01-15",
+                            "description": "First date in YYYY-MM-DD format"
+                        },
+                        {
+                            "key": "date2",
+                            "value": "2023-01-15",
+                            "description": "Second date in YYYY-MM-DD format"
+                        }
+                    ]
+                },
+                "description": "Calcula la diferencia NDVI entre dos fechas."
+            },
+            "response": []
+        },
+        {
+            "name": "Detect Deforestation Zones (NDVI)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{
+    "date1": "2022-01-15",
+    "date2": "2023-01-15",
+    "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [
+                    -70.0,
+                    -10.0
+                ],
+                [
+                    -70.0,
+                    -9.0
+                ],
+                [
+                    -69.0,
+                    -9.0
+                ],
+                [
+                    -69.0,
+                    -10.0
+                ],
+                [
+                    -70.0,
+                    -10.0
+                ]
+            ]
+        ]
+    },
+    "threshold": 0.25
+}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-deforestation-zones-from-geojson",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-deforestation-zones-from-geojson"
+                    ]
+                },
+                "description": "Detecta zonas de deforestación usando NDVI dentro de una geometría GeoJSON."
+            },
+            "response": []
+        },
+        {
+            "name": "Get SAVI Tile URL",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-savi-tile-url?date=2023-01-15",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-savi-tile-url"
+                    ],
+                    "query": [
+                        {
+                            "key": "date",
+                            "value": "2023-01-15",
+                            "description": "Date in YYYY-MM-DD format"
+                        }
+                    ]
+                },
+                "description": "Obtiene la URL de un mosaico SAVI para una fecha específica."
+            },
+            "response": []
+        },
+        {
+            "name": "Get SAVI Difference",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-savi-diff?date1=2022-01-15&date2=2023-01-15",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-savi-diff"
+                    ],
+                    "query": [
+                        {
+                            "key": "date1",
+                            "value": "2022-01-15",
+                            "description": "First date in YYYY-MM-DD format"
+                        },
+                        {
+                            "key": "date2",
+                            "value": "2023-01-15",
+                            "description": "Second date in YYYY-MM-DD format"
+                        }
+                    ]
+                },
+                "description": "Calcula la diferencia SAVI entre dos fechas."
+            },
+            "response": []
+        },
+        {
+            "name": "Detect Deforestation Zones (SAVI)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{
+    "date1": "2022-01-15",
+    "date2": "2023-01-15",
+    "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [
+                    -70.0,
+                    -10.0
+                ],
+                [
+                    -70.0,
+                    -9.0
+                ],
+                [
+                    -69.0,
+                    -9.0
+                ],
+                [
+                    -69.0,
+                    -10.0
+                ],
+                [
+                    -70.0,
+                    -10.0
+                ]
+            ]
+        ]
+    },
+    "threshold": 0.25
+}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-deforestation-zones-from-geojson-savi",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-deforestation-zones-from-geojson-savi"
+                    ]
+                },
+                "description": "Detecta zonas de deforestación usando SAVI dentro de una geometría GeoJSON."
+            },
+            "response": []
+        },
+        {
+            "name": "Find Best Image Date",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{
+    "targetDate": "2023-01-15",
+    "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -70.0,
+            -10.0
+        ]
+    }
+}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "http://23.23.124.226:5000/find-best-image-date",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "find-best-image-date"
+                    ]
+                },
+                "description": "Encuentra la mejor fecha de imagen (con menor nubosidad) cerca de una fecha objetivo y opcionalmente dentro de una geometría."
+            },
+            "response": []
+        },
+        {
+            "name": "Get NBR Tile URL",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-nbr-tile-url?date=2023-01-15",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-nbr-tile-url"
+                    ],
+                    "query": [
+                        {
+                            "key": "date",
+                            "value": "2023-01-15",
+                            "description": "Date in YYYY-MM-DD format"
+                        }
+                    ]
+                },
+                "description": "Obtiene la URL de un mosaico NBR para una fecha específica."
+            },
+            "response": []
+        },
+        {
+            "name": "Get NBR Difference",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-nbr-diff?date1=2022-01-15&date2=2023-01-15",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-nbr-diff"
+                    ],
+                    "query": [
+                        {
+                            "key": "date1",
+                            "value": "2022-01-15",
+                            "description": "First date in YYYY-MM-DD format"
+                        },
+                        {
+                            "key": "date2",
+                            "value": "2023-01-15",
+                            "description": "Second date in YYYY-MM-DD format"
+                        }
+                    ]
+                },
+                "description": "Calcula la diferencia NBR entre dos fechas."
+            },
+            "response": []
+        },
+        {
+            "name": "Detect Deforestation Zones (NBR)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{
+    "date1": "2022-01-15",
+    "date2": "2023-01-15",
+    "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [
+                    -70.0,
+                    -10.0
+                ],
+                [
+                    -70.0,
+                    -9.0
+                ],
+                [
+                    -69.0,
+                    -9.0
+                ],
+                [
+                    -69.0,
+                    -10.0
+                ],
+                [
+                    -70.0,
+                    -10.0
+                ]
+            ]
+        ]
+    },
+    "threshold": 0.25
+}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "http://23.23.124.226:5000/gee-deforestation-zones-from-geojson-nbr",
+                    "protocol": "http",
+                    "host": [
+                        "23",
+                        "23",
+                        "124",
+                        "226"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "gee-deforestation-zones-from-geojson-nbr"
+                    ]
+                },
+                "description": "Detecta zonas de deforestación usando NBR dentro de una geometría GeoJSON."
+            },
+            "response": []
+        }
+    ]
+}
