@@ -36,20 +36,35 @@ def crear_mosaico_ndvi_periodo(fecha_str):
     )
     logger.debug("Filtered image collection by date and cloud cover.")
 
-    def calcular_ndvi(img):
+    if coleccion.size().getInfo() == 0:
+        logger.warning(f"No images found for the period {start_date} to {end_date} with CLOUD_COVER < 50.")
+        return None, None, start_date, end_date, 100 # Return None for mosaics, and 100 for cloud cover
+
+    def calcular_ndvi_and_clouds(img):
         pixel_qa = img.select('QA_PIXEL')
-        # Máscara para nubes bajas y sombras de nubes bajas
+        
+        # Cloud mask: pixels where bit 3 (cloud) or bit 5 (cirrus) is set
+        cloud_mask = pixel_qa.bitwiseAnd(1 << 3).Or(pixel_qa.bitwiseAnd(1 << 5)).neq(0).rename('clouds')
+        
+        # Clear mask: pixels where bit 3 (cloud) and bit 4 (cloud shadow) are NOT set
         clear_mask = pixel_qa.bitwiseAnd(1 << 3).eq(0).And(pixel_qa.bitwiseAnd(1 << 4).eq(0))
         
         nir = reflectance(img, 'SR_B5')
         red = reflectance(img, 'SR_B4')
         ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI')
-        logger.debug("Calculated NDVI for an image.")
-        return ndvi.clamp(-1, 1).updateMask(clear_mask)
+        
+        # Apply clear mask to NDVI, so NDVI is masked where there are clouds or cloud shadows
+        ndvi = ndvi.clamp(-1, 1)
+        
+        return ndvi.addBands(cloud_mask)
 
-    coleccion_ndvi = coleccion.map(calcular_ndvi)
+    coleccion_ndvi_clouds = coleccion.map(calcular_ndvi_and_clouds)
+    
+    # Create mosaics for NDVI and clouds separately
+    ndvi_mosaic = coleccion_ndvi_clouds.select('NDVI').qualityMosaic('NDVI')
+    cloud_mosaic = coleccion_ndvi_clouds.select('clouds').max() # Use max to get any cloud pixel
     # Usar 'qualityMosaic' en lugar de 'mean' para obtener los mejores píxeles
-    mosaico = coleccion_ndvi.qualityMosaic('NDVI')
+    # mosaico = coleccion_ndvi.qualityMosaic('NDVI') # This line was removed as it was incorrect and redundant
     logger.debug("Applied qualityMosaic to NDVI collection.")
     #best_image_for_cloud_cover = coleccion.sort('CLOUD_COVER', False).first() # Para pruebas: obtener la imagen con mayor nubosidad
     best_image_for_cloud_cover = coleccion.sort('CLOUD_COVER').first()
@@ -59,8 +74,8 @@ def crear_mosaico_ndvi_periodo(fecha_str):
     else:
         cloud_cover_value = 100 # Default to 100% cloud cover if no image is found
         logger.debug("No best image found, setting cloud cover to 100.")
-    
-    return mosaico, start_date, end_date, cloud_cover_value
+
+    return ndvi_mosaic, cloud_mosaic, start_date, end_date, cloud_cover_value
 
 @app.route('/gee-tile-url')
 def get_tile_url():
@@ -72,7 +87,7 @@ def get_tile_url():
     
     try:
         logger.info(f"Creating NDVI mosaic for date: {date}")
-        ndvi, start_date, end_date, cloud_cover_value = crear_mosaico_ndvi_periodo(date)
+        ndvi, clouds, start_date, end_date, cloud_cover_value = crear_mosaico_ndvi_periodo(date)
         
         if ndvi is None: # Handle case where no suitable images were found
             logger.warning(f"No suitable NDVI mosaic could be created for date: {date}")
@@ -82,10 +97,19 @@ def get_tile_url():
         
         min_val, max_val = -0.1, 0.9
         palette = ['#8c510a', '#d8b365', '#f6e8c3', '#c7eae5', '#5ab4ac', '#01665e']
-        vis_params = {'min': min_val, 'max': max_val, 'palette': palette}
+        ndvi_vis_params = {'min': min_val, 'max': max_val, 'palette': palette}
         
-        visual = ndvi.visualize(**vis_params)
-        map_id_dict = ee.data.getMapId({'image': visual})
+        # Visualize NDVI
+        ndvi_visual = ndvi.visualize(**ndvi_vis_params)
+
+        # Create a light blue image that is masked by the `clouds` mask.
+        light_blue_image = ee.Image.constant([140, 160, 180]).uint8() # RGB for metallic blue
+        cloud_overlay = light_blue_image.updateMask(clouds) # Only show light blue where clouds are 1
+        
+        # Blend the cloud overlay on top of the NDVI visualization.
+        final_visual = ee.Image.blend(ndvi_visual, cloud_overlay)
+
+        map_id_dict = ee.data.getMapId({'image': final_visual})
         logger.info("Map ID dictionary obtained.")
         
         return jsonify({
@@ -166,8 +190,8 @@ def zonas_deforestadas_geojson():
     try:
         logger.info("Processing deforestation zones from GeoJSON.")
         region = ee.Geometry(geometry_data)
-        ndvi1, start1, end1, cloud_cover1 = crear_mosaico_ndvi_periodo(date1)
-        ndvi2, start2, end2, cloud_cover2 = crear_mosaico_ndvi_periodo(date2)
+        ndvi1, clouds1, start1, end1, cloud_cover1 = crear_mosaico_ndvi_periodo(date1)
+        ndvi2, clouds2, start2, end2, cloud_cover2 = crear_mosaico_ndvi_periodo(date2)
         
         diff = ndvi1.subtract(ndvi2).rename('NDVI_DIFF')
         deforestation_mask = ndvi1.gt(0.4).And(diff.gt(threshold)).selfMask()

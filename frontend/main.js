@@ -421,8 +421,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         statusTextSpan.textContent = message;
         statusMessage.style.display = 'block';
-        statusMessage.style.backgroundColor = isError ? '#f8d7da' : '#d4edda';
-        statusMessage.style.color = isError ? '#721c24' : '#155724';
+        if (isError) {
+            statusMessage.classList.add('error');
+        } else {
+            statusMessage.classList.remove('error');
+        }
 
         if (candidateImagesListContentDiv) {
             candidateImagesListContentDiv.innerHTML = '';

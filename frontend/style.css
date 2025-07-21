@@ -2,7 +2,7 @@ body, html {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; /* Fuente más moderna */
   overflow: hidden; /* Evitar barras de scroll en el body */
 }
 
@@ -21,8 +21,8 @@ body, html {
   width: 320px;
   height: 100%;
   padding: 20px;
-  background-color: #f9f9f9;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* Sombra a la derecha */
+  background-color: #ffffff; /* Fondo blanco */
+  box-shadow: 2px 0 10px rgba(0,0,0,0.08); /* Sombra más suave y extendida */
   overflow-y: auto;
   z-index: 1000; /* Asegurar que esté sobre el mapa */
 }
@@ -43,13 +43,15 @@ body, html {
 }
 
 #controls input[type="date"],
-#controls input[type="number"] {
+#controls input[type="number"],
+#controls input[type="file"] { /* Añadir estilo para input file */
   width: calc(100% - 22px);
-  padding: 8px 10px;
+  padding: 10px 12px; /* Más padding */
   margin-top: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1em;
+  border: 1px solid #dcdcdc; /* Borde más suave */
+  border-radius: 6px; /* Bordes más redondeados */
+  font-size: 0.95em; /* Fuente ligeramente más pequeña */
+  box-sizing: border-box; /* Incluir padding y borde en el ancho */
 }
 
 .date-container {
@@ -62,24 +64,24 @@ body, html {
 }
 
 .search-date-btn {
-  appearance: none; /* Anular estilos predeterminados del navegador */
-  -webkit-appearance: none; /* Para compatibilidad con WebKit */
-  -moz-appearance: none; /* Para compatibilidad con Mozilla */
-  width: 30px; /* Ancho fijo */
-  height: 30px; /* Alto fijo */
-  margin-left: 5px;
-  padding: 0; /* Eliminar padding predeterminado */
-  background-color: transparent; /* Fondo transparente */
-  border: none; /* Sin borde */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 32px; /* Más grande */
+  height: 32px; /* Más grande */
+  margin-left: 8px; /* Más espacio */
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid #dcdcdc; /* Borde sutil */
   cursor: pointer;
-  border-radius: 4px;
-  font-size: 1.5em; /* Tamaño del ícono */
-  line-height: 1; /* Asegurar el centrado vertical */
+  border-radius: 6px; /* Más redondeado */
+  font-size: 1.3em; /* Ícono más grande */
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #333; /* Color del ícono */
-  transition: color 0.2s; /* Transición suave para el hover */
+  color: #555; /* Color más suave */
+  transition: all 0.2s ease-in-out; /* Transición para todo */
   outline: none; /* Eliminar el contorno de enfoque */
 }
 
@@ -88,7 +90,14 @@ body, html {
 }
 
 .search-date-btn:hover {
-  color: #007bff; /* Color al pasar el ratón */
+  background-color: #e9ecef; /* Fondo sutil al pasar el ratón */
+  color: #007bff; /* Color principal al pasar el ratón */
+  border-color: #007bff; /* Borde al pasar el ratón */
+}
+
+.search-date-btn:active {
+  background-color: #dee2e6; /* Fondo al hacer click */
+  border-color: #0056b3;
 }
 
 .buttons {
@@ -109,25 +118,30 @@ body, html {
 #controls button {
   display: block;
   width: 100%;
-  padding: 10px;
-  margin-top: 10px;
+  padding: 12px 15px; /* Más padding */
+  margin-top: 12px; /* Más margen */
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px; /* Más redondeado */
   cursor: pointer;
-  font-size: 1em;
-  transition: background-color 0.3s, opacity 0.3s;
+  font-size: 0.95em; /* Fuente ligeramente más pequeña */
+  font-weight: 600; /* Más negrita */
+  transition: background-color 0.2s ease-in-out, opacity 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Sombra sutil */
 }
 
 #controls button:hover:not(:disabled) {
   background-color: #0056b3;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* Sombra más pronunciada al hover */
 }
 
 #controls button:disabled {
-  background-color: #cccccc;
+  background-color: #e0e0e0; /* Color más claro para deshabilitado */
+  color: #a0a0a0; /* Texto más claro */
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.8;
+  box-shadow: none;
 }
 
 .file-upload-section {
