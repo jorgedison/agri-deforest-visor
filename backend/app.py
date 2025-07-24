@@ -246,9 +246,23 @@ def zonas_deforestadas_geojson():
         vectors = deforestation_mask.reduceToVectors(
             geometry=region, scale=90, geometryType='polygon', maxPixels=1e10
         )
+        total_area_sq_m = region.area().getInfo()
+        
+        # Calculate the area of the deforestation mask
+        deforested_area_image = deforestation_mask.multiply(ee.Image.pixelArea())
+        deforested_area_dict = deforested_area_image.reduceRegion(
+            reducer=ee.Reducer.sum(),
+            geometry=region,
+            scale=90, # Use the same scale as reduceToVectors
+            maxPixels=1e10
+        ).getInfo()
+        deforested_area_sq_m = list(deforested_area_dict.values())[0] if deforested_area_dict else 0 # Get the sum of pixel areas
+
+        deforestation_percentage = (deforested_area_sq_m / total_area_sq_m * 100) if total_area_sq_m > 0 else 0
+
         geojson = vectors.getInfo()
         zone_count = len(geojson.get('features', []))
-        logger.info(f"Detected {zone_count} deforestation zones.")
+        logger.info(f"Detected {zone_count} deforestation zones. Total Area: {total_area_sq_m:.2f} sqm, Deforested Area: {deforested_area_sq_m:.2f} sqm, Percentage: {deforestation_percentage:.2f}%")
 
         return jsonify({
             'features': geojson.get('features', []),
@@ -259,7 +273,10 @@ def zonas_deforestadas_geojson():
                 'dateBase': {'start': start1, 'end': end1},
                 'dateFinal': {'start': start2, 'end': end2},
                 'cloudCover1': cloud_cover1,
-                'cloudCover2': cloud_cover2
+                'cloudCover2': cloud_cover2,
+                'totalAreaSqM': total_area_sq_m,
+                'deforestedAreaSqM': deforested_area_sq_m,
+                'deforestationPercentage': deforestation_percentage
             }
         })
     except Exception as e:
@@ -387,9 +404,23 @@ def zonas_deforestadas_geojson_savi():
         vectors = deforestation_mask.reduceToVectors(
             geometry=region, scale=90, geometryType='polygon', maxPixels=1e10
         )
+        total_area_sq_m = region.area().getInfo()
+        
+        # Calculate the area of the deforestation mask
+        deforested_area_image = deforestation_mask.multiply(ee.Image.pixelArea())
+        deforested_area_dict = deforested_area_image.reduceRegion(
+            reducer=ee.Reducer.sum(),
+            geometry=region,
+            scale=90, # Use the same scale as reduceToVectors
+            maxPixels=1e10
+        ).getInfo()
+        deforested_area_sq_m = list(deforested_area_dict.values())[0] if deforested_area_dict else 0 # Get the sum of pixel areas
+
+        deforestation_percentage = (deforested_area_sq_m / total_area_sq_m * 100) if total_area_sq_m > 0 else 0
+
         geojson = vectors.getInfo()
         zone_count = len(geojson.get('features', []))
-        logger.info(f"Detected {zone_count} deforestation zones using SAVI.")
+        logger.info(f"Detected {zone_count} deforestation zones using SAVI. Total Area: {total_area_sq_m:.2f} sqm, Deforested Area: {deforested_area_sq_m:.2f} sqm, Percentage: {deforestation_percentage:.2f}%")
 
         return jsonify({
             'features': geojson.get('features', []),
@@ -400,7 +431,10 @@ def zonas_deforestadas_geojson_savi():
                 'dateBase': {'start': start1, 'end': end1},
                 'dateFinal': {'start': start2, 'end': end2},
                 'cloudCover1': cloud_cover1,
-                'cloudCover2': cloud_cover2
+                'cloudCover2': cloud_cover2,
+                'totalAreaSqM': total_area_sq_m,
+                'deforestedAreaSqM': deforested_area_sq_m,
+                'deforestationPercentage': deforestation_percentage
             }
         })
     except Exception as e:
@@ -630,9 +664,23 @@ def zonas_deforestadas_geojson_nbr():
         vectors = deforestation_mask.reduceToVectors(
             geometry=region, scale=90, geometryType='polygon', maxPixels=1e10
         )
+        total_area_sq_m = region.area().getInfo()
+        
+        # Calculate the area of the deforestation mask
+        deforested_area_image = deforestation_mask.multiply(ee.Image.pixelArea())
+        deforested_area_dict = deforested_area_image.reduceRegion(
+            reducer=ee.Reducer.sum(),
+            geometry=region,
+            scale=90, # Use the same scale as reduceToVectors
+            maxPixels=1e10
+        ).getInfo()
+        deforested_area_sq_m = list(deforested_area_dict.values())[0] if deforested_area_dict else 0 # Get the sum of pixel areas
+
+        deforestation_percentage = (deforested_area_sq_m / total_area_sq_m * 100) if total_area_sq_m > 0 else 0
+
         geojson = vectors.getInfo()
         zone_count = len(geojson.get('features', []))
-        logger.info(f"Detected {zone_count} deforestation zones using NBR.")
+        logger.info(f"Detected {zone_count} deforestation zones using NBR. Total Area: {total_area_sq_m:.2f} sqm, Deforested Area: {deforested_area_sq_m:.2f} sqm, Percentage: {deforestation_percentage:.2f}%")
 
         return jsonify({
             'features': geojson.get('features', []),
@@ -643,7 +691,10 @@ def zonas_deforestadas_geojson_nbr():
                 'dateBase': {'start': start1, 'end': end1},
                 'dateFinal': {'start': start2, 'end': end2},
                 'cloudCover1': cloud_cover1,
-                'cloudCover2': cloud_cover2
+                'cloudCover2': cloud_cover2,
+                'totalAreaSqM': total_area_sq_m,
+                'deforestedAreaSqM': deforested_area_sq_m,
+                'deforestationPercentage': deforestation_percentage
             }
         })
     except Exception as e:
